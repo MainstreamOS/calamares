@@ -13,6 +13,7 @@
 #include "core/ColorUtils.h"
 #include "core/PartitionModel.h"
 #include "core/SizeUtils.h"
+#include "core/KPMHelpers.h"
 
 #include "utils/Gui.h"
 #include "utils/Logger.h"
@@ -20,6 +21,7 @@
 
 #include <kpmcore/core/device.h>
 #include <kpmcore/fs/filesystem.h>
+#include <kpmcore/core/partition.h>
 
 // Qt
 #include <QGuiApplication>
@@ -189,6 +191,15 @@ PartitionLabelsView::buildTexts( const QModelIndex& index ) const
                       && index.data( PartitionModel::FileSystemTypeRole ).toInt() == FileSystem::Fat32 )
             {
                 firstLine = tr( "EFI system", "@label" );
+            }
+            else if ( index.data( PartitionModel::FileSystemTypeRole ).toInt() == FileSystem::Unformatted
+                      && index.data( PartitionModel::SizeRole ).toInt() <= 8388608 )
+            {
+                // TODO: It would be better if we could extract the BIOS boot
+                // flag from the partition and use that here, but we can't -
+                // static_cast< Partition* >( index.data( PartitionModel::PartitionPtrRole ).value< void* >() )->activeFlags()
+                // is always QFlags() (empty) for some reason.
+                firstLine = tr("BIOS boot", "@label" );
             }
             else if ( index.data( PartitionModel::FileSystemTypeRole ).toInt() == FileSystem::LinuxSwap )
             {
