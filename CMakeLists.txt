@@ -38,10 +38,13 @@
 #                       - TESTING (standard CMake option)
 #   DEBUG_<foo>     : special developer flags for debugging.
 #   PYTHONLIBS_VERSION : if set on the command-line, use a specific Python version
+#   BOOSTPYTHON_COMPONENT : if set on the command-line, use a specific Boost Python component
+#                          (e.g., python313 for Python 3.13, default is "python")
 #
 # Example usage:
 #
 #   cmake . -DSKIP_MODULES="partition luksbootkeycfg"
+#   cmake . -DWITH_PYBIND11=OFF -DBOOSTPYTHON_COMPONENT=python313
 #
 # To obtain the version number of calamares, run CMake in script mode, e.g.
 #   cmake -P CMakeLists.txt
@@ -205,6 +208,10 @@ else()
 endif()
 
 set(BOOSTPYTHON_VERSION 1.72.0)
+if(NOT DEFINED BOOSTPYTHON_COMPONENT)
+    set(BOOSTPYTHON_COMPONENT "python")
+endif()
+
 if(DEFINED PYTHONLIBS_VERSION)
     set(PYTHONLIBS_EXTRA "EXACT")
 else()
@@ -227,6 +234,9 @@ list(APPEND CMAKE_AUTOMOC_MACRO_NAMES
         "K_EXPORT_PLASMA_DATAENGINE_WITH_JSON"
         "K_EXPORT_PLASMA_RUNNER"
 )
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
 if(POLICY CMP0171)
     cmake_policy(SET CMP0177 NEW)
 endif()
@@ -480,16 +490,30 @@ endif()
 
 if(WITH_PYTHON AND NOT WITH_PYBIND11)
     set(WITH_BOOST_PYTHON ON)
-    find_package(boost_python)
-    if(NOT TARGET Boost::python)
-        find_package(Boost ${BOOSTPYTHON_VERSION} COMPONENTS python)
+    if(NOT "${BOOSTPYTHON_COMPONENT}" STREQUAL "python")
+        message(STATUS "Using explicitly specified Boost Python component: ${BOOSTPYTHON_COMPONENT}")
+        find_package(Boost ${BOOSTPYTHON_VERSION} CONFIG COMPONENTS ${BOOSTPYTHON_COMPONENT})
         set_package_properties(Boost PROPERTIES
             PURPOSE "Boost.Python is used for Python job modules (because WITH_PYBIND11 is OFF)."
             TYPE REQUIRED
         )
+        if(TARGET Boost::${BOOSTPYTHON_COMPONENT})
+            add_library(Boost::python ALIAS Boost::${BOOSTPYTHON_COMPONENT})
+            set(Boost_FOUND ON)
+        endif()
     else()
-        message(STATUS "Found boost_python with target Boost::python")
-        set(Boost_FOUND ON)
+        find_package(boost_python)
+        if(NOT TARGET Boost::python)
+            message(STATUS "Using Boost Python component: ${BOOSTPYTHON_COMPONENT}")
+            find_package(Boost ${BOOSTPYTHON_VERSION} CONFIG COMPONENTS ${BOOSTPYTHON_COMPONENT})
+            set_package_properties(Boost PROPERTIES
+                PURPOSE "Boost.Python is used for Python job modules (because WITH_PYBIND11 is OFF)."
+                TYPE REQUIRED
+            )
+        else()
+            message(STATUS "Found boost_python with target Boost::python")
+            set(Boost_FOUND ON)
+        endif()
     endif()
 endif()
 add_feature_info(python WITH_PYTHON "Enable Python-modules")
