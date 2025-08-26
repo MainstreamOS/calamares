@@ -637,7 +637,7 @@ def run_grub_install(fw_type, partitions, efi_directory, install_hybrid_grub):
                                    "--bootloader-id=" + efi_bootloader_id,
                                    "--force"])
     else:
-        if libcalamares.globalstorage.value("bootLoader") is None:
+        if libcalamares.globalstorage.value("bootLoader") is None and install_hybrid_grub:
             efi_install_path = libcalamares.globalstorage.value("efiSystemPartition")
             if efi_install_path is None or efi_install_path == "":
                 efi_install_path = "/boot/efi"
