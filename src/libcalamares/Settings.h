@@ -63,11 +63,14 @@ public:
     bool isCustom() const { return m_instanceKey.isCustom(); }
     int weight() const { return m_weight < 0 ? 1 : m_weight; }
     bool explicitWeight() const { return m_weight > 0; }
+    bool autoProceed() const { return m_autoProceed; }
 
 private:
     InstanceKey m_instanceKey;
     QString m_configFileName;
     int m_weight = 0;
+    /// @brief Whether to automatically proceed to the next ViewStep page
+    bool m_autoProceed = false;
 };
 
 class DLLEXPORT Settings : public QObject

@@ -96,6 +96,8 @@ InstanceDescription::fromSettings( const QVariantMap& m )
         {
             r.m_configFileName = c;
         }
+
+        r.m_autoProceed = m.value( "autoProceed" ).toBool();
     }
     return r;
 }

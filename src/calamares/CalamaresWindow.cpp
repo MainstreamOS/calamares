@@ -18,6 +18,7 @@
 #include "DebugWindow.h"
 #include "Settings.h"
 #include "ViewManager.h"
+#include "viewpages/ViewStep.h"
 #include "progresstree/ProgressTreeView.h"
 #include "utils/Gui.h"
 #include "utils/Logger.h"
@@ -40,6 +41,8 @@
 #include <QQuickWidget>
 #endif
 #include <QTreeView>
+
+#include <algorithm>
 
 static QSize
 desktopSize( QWidget* w )
@@ -96,6 +99,28 @@ setButtonIcon( QPushButton* button, const QString& name )
     if ( button && !icon.isNull() )
     {
         button->setIcon( icon );
+    }
+}
+
+/** @brief Enable the "Next" button and possibly auto-proceed to next page */
+static inline void
+setNextButtonEnabled( QPushButton* button, Calamares::ViewStep* step, bool enabled )
+{
+    button->setEnabled( enabled );
+
+    if ( !enabled || !step )
+    {
+        return;
+    }
+
+    const auto instanceDescriptors = Calamares::Settings::instance()->moduleInstances();
+    auto targetKey = step->moduleInstanceKey();
+    auto moduleFinder
+        = [ &targetKey ]( const Calamares::InstanceDescription& d ) { return d.isValid() && d.key() == targetKey; };
+    const auto it = std::find_if( instanceDescriptors.constBegin(), instanceDescriptors.constEnd(), moduleFinder );
+    if ( it->autoProceed() )
+    {
+        button->click();
     }
 }
 
@@ -221,7 +246,11 @@ getWidgetNavigation( Calamares::DebugWindowManager*,
         next->setObjectName( "view-button-next" );
         next->setEnabled( viewManager->nextEnabled() );
         QObject::connect( next, &QPushButton::clicked, viewManager, &Calamares::ViewManager::next );
-        QObject::connect( viewManager, &Calamares::ViewManager::nextEnabledChanged, next, &QPushButton::setEnabled );
+        QObject::connect( viewManager,
+                          &Calamares::ViewManager::nextEnabledChanged,
+                          next,
+                          [ = ]( Calamares::ViewStep* step, bool enabled )
+                          { setNextButtonEnabled( next, step, enabled ); } );
         QObject::connect( viewManager, &Calamares::ViewManager::nextLabelChanged, next, &QPushButton::setText );
         QObject::connect(
             viewManager, &Calamares::ViewManager::nextIconChanged, [ = ]( QString n ) { setButtonIcon( next, n ); } );
