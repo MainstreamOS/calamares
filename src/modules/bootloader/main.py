@@ -637,10 +637,6 @@ def run_grub_install(fw_type, partitions, efi_directory, install_hybrid_grub):
                                    "--bootloader-id=" + efi_bootloader_id,
                                    "--force"])
     else:
-        if efi_directory is not None and not install_hybrid_grub:
-            libcalamares.utils.warning(_("Cannot install BIOS bootloader on UEFI installation when install_hybrid_grub is 'False'!"))
-            return
-
         if libcalamares.globalstorage.value("bootLoader") is None:
             efi_install_path = libcalamares.globalstorage.value("efiSystemPartition")
             if efi_install_path is None or efi_install_path == "":
