@@ -18,12 +18,13 @@
 #include "DebugWindow.h"
 #include "Settings.h"
 #include "ViewManager.h"
-#include "viewpages/ViewStep.h"
+
 #include "progresstree/ProgressTreeView.h"
 #include "utils/Gui.h"
 #include "utils/Logger.h"
 #include "utils/Qml.h"
 #include "utils/Retranslator.h"
+#include "viewpages/ViewStep.h"
 
 #include <QApplication>
 #include <QBoxLayout>
