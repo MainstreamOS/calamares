@@ -358,6 +358,19 @@ Settings::moduleInstances() const
     return m_moduleInstances;
 }
 
+InstanceDescription
+Settings::moduleInstance( const Calamares::ModuleSystem::InstanceKey& key ) const
+{
+    for ( const auto& instance : m_moduleInstances )
+    {
+        if ( instance.isValid() && instance.key() == key )
+        {
+            return instance;
+        }
+    }
+    return InstanceDescription {};
+}
+
 Settings::ModuleSequence
 Settings::modulesSequence() const
 {
