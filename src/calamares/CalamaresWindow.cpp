@@ -114,12 +114,8 @@ setNextButtonEnabled( QPushButton* button, Calamares::ViewStep* step, bool enabl
         return;
     }
 
-    const auto instanceDescriptors = Calamares::Settings::instance()->moduleInstances();
-    auto targetKey = step->moduleInstanceKey();
-    auto moduleFinder
-        = [ &targetKey ]( const Calamares::InstanceDescription& d ) { return d.isValid() && d.key() == targetKey; };
-    const auto it = std::find_if( instanceDescriptors.constBegin(), instanceDescriptors.constEnd(), moduleFinder );
-    if ( it->autoProceed() )
+    const auto descriptor = Calamares::Settings::instance()->moduleInstance( step->moduleInstanceKey() );
+    if ( descriptor.isValid() && descriptor.autoProceed() )
     {
         button->click();
     }
