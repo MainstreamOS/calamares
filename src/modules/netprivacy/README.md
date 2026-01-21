@@ -1,51 +1,30 @@
 <!-- SPDX-FileCopyrightText: 2026 VCPU
      SPDX-License-Identifier: GPL-3.0-or-later -->
 
-# NetPrivacy Module
+# NetPrivacy
 
-Configures network privacy settings during installation.
+Configure network privacy during installation.
 
 ## Features
 
-- **MAC Address Randomization** - Prevents tracking across networks
-- **IPv6 Privacy Extensions** - RFC 4941 temporary addresses
+- MAC randomization (off/random/vendor-preserved/fixed)
+- IPv6 privacy extensions (RFC 4941) or disable
 
 ## Configuration
 
-Edit `netprivacy.conf` to set defaults:
-
 ```yaml
-macPolicy: 0        # 0=Off, 1=Random, 2=Vendor, 3=Fixed
-ipv6Mode: 0         # 0=Standard, 1=Privacy, 2=Disable
+macPolicy: 0  # 0=off 1=random 2=vendor 3=fixed
+ipv6Mode: 0   # 0=standard 1=privacy 2=disable
 ```
 
-## Testing Without Installation
-
-Test the module without running a real installation:
+## Testing
 
 ```bash
-# Create test directory
-mkdir -p /tmp/netprivacy-test
-export NETPRIVACY_TEST_ROOT=/tmp/netprivacy-test
-
-# Run Calamares in debug mode
+export NETPRIVACY_TEST_ROOT=/tmp/test
 sudo -E calamares -d
 ```
 
-Then verify the generated configuration files:
+## Output Files
 
-```bash
-cat /tmp/netprivacy-test/etc/NetworkManager/conf.d/80-calamares-mac.conf
-cat /tmp/netprivacy-test/etc/systemd/network/80-calamares-mac.link
-cat /tmp/netprivacy-test/etc/systemd/network/80-calamares-ipv6.network
-```
-
-## Generated Files
-
-| Path | Purpose |
-|------|---------|
-| `/etc/NetworkManager/conf.d/80-calamares-mac.conf` | MAC randomization (NetworkManager) |
-| `/etc/systemd/network/80-calamares-mac.link` | MAC randomization (systemd-networkd) |
-| `/etc/NetworkManager/conf.d/80-calamares-ipv6.conf` | IPv6 privacy (NetworkManager) |
-| `/etc/systemd/network/80-calamares-ipv6.network` | IPv6 privacy (systemd-networkd) |
-| `/etc/sysctl.d/99-calamares-ipv6.conf` | IPv6 disable (if selected) |
+- `/etc/NetworkManager/conf.d/80-calamares-*.conf`
+- `/etc/systemd/network/80-calamares-*.{link,network}`
