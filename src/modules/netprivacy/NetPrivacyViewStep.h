@@ -1,92 +1,78 @@
-/* SPDX-FileCopyrightText: 2025 JPShag
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-
+/* SPDX-FileCopyrightText: 2026 VCPU
+   SPDX-License-Identifier: GPL-3.0-or-later */
 #ifndef NETPRIVACYVIEWSTEP_H
 #define NETPRIVACYVIEWSTEP_H
 
-#include <libcalamares/viewpages/ViewStep.h>
-#include <libcalamares/DllMacro.h>
-#include <libcalamares/utils/PluginFactory.h>
-#include <libcalamares/Job.h>
-
-#include <QString>
-#include <QVariant>
+#include <viewpages/ViewStep.h>
+#include <utils/PluginFactory.h>
+#include "NetPrivacyTypes.h"
+#include <QObject>
 #include <QVariantList>
 
 class QWidget;
 
-struct VendorOUI
+namespace NetPrivacy
 {
-    QString id;
-    QString name;
-    QString oui;
-};
 
-class PLUGINDLLEXPORT NetPrivacyViewStep : public Calamares::ViewStep
+class NetPrivacyViewStep : public Calamares::ViewStep
 {
     Q_OBJECT
 
-    Q_PROPERTY( int macPolicy READ macPolicy WRITE setMacPolicy NOTIFY macPolicyChanged )
+    Q_PROPERTY( int macPolicy READ macPolicyInt WRITE setMacPolicyInt NOTIFY macPolicyChanged )
     Q_PROPERTY( QString macAddress READ macAddress WRITE setMacAddress NOTIFY macAddressChanged )
     Q_PROPERTY( QString selectedVendor READ selectedVendor WRITE setSelectedVendor NOTIFY selectedVendorChanged )
-    Q_PROPERTY( QVariantList vendorList READ vendorList CONSTANT )
-    Q_PROPERTY( bool ipv6Privacy READ ipv6Privacy WRITE setIpv6Privacy NOTIFY ipv6PrivacyChanged )
-    Q_PROPERTY( int ipv6Mode READ ipv6Mode WRITE setIpv6Mode NOTIFY ipv6ModeChanged )
+    Q_PROPERTY( int ipv6Mode READ ipv6ModeInt WRITE setIpv6ModeInt NOTIFY ipv6ModeChanged )
+    Q_PROPERTY( bool perConnectionRandom READ perConnectionRandom WRITE setPerConnectionRandom NOTIFY perConnectionRandomChanged )
+    Q_PROPERTY( QVariantList vendorList READ vendorList NOTIFY vendorListChanged )
+    Q_PROPERTY( QString currentPreviewMac READ generatePreviewMac NOTIFY macPolicyChanged )
 
 public:
     explicit NetPrivacyViewStep( QObject* parent = nullptr );
     ~NetPrivacyViewStep() override;
 
     QString prettyName() const override;
-    QString prettyStatus() const override;
     QWidget* widget() override;
-
-    bool isNextEnabled() const override;
-    bool isBackEnabled() const override;
-    bool isAtBeginning() const override;
-    bool isAtEnd() const override;
-
+    void setConfigurationMap( const QVariantMap& cfg ) override;
     Calamares::JobList jobs() const override;
 
-    void onActivate() override;
-    void onLeave() override;
-    void setConfigurationMap( const QVariantMap& configurationMap ) override;
+    bool isNextEnabled() const override;
+    bool isBackEnabled() const override { return true; }
+    bool isAtBeginning() const override { return true; }
+    bool isAtEnd() const override       { return true; }
 
-    int macPolicy() const;
-    QString macAddress() const;
-    QString selectedVendor() const;
+    int macPolicyInt() const         { return static_cast<int>( m_macPolicy ); }
+    QString macAddress() const       { return m_macAddress; }
+    QString selectedVendor() const   { return m_selectedVendor; }
+    int ipv6ModeInt() const          { return static_cast<int>( m_ipv6Mode ); }
+    bool perConnectionRandom() const { return m_config.perConnectionRandom; }
+
+    void setMacPolicyInt( int p );
+    void setMacAddress( const QString& addr );
+    void setSelectedVendor( const QString& v );
+    void setIpv6ModeInt( int m );
+    void setPerConnectionRandom( bool r );
+
     QVariantList vendorList() const;
-    bool ipv6Privacy() const;
-    int ipv6Mode() const;
-
-    void setMacPolicy( int policy );
-    void setMacAddress( const QString& address );
-    void setSelectedVendor( const QString& vendorId );
-    void setIpv6Privacy( bool enable );
-    void setIpv6Mode( int mode );
-
-    Q_INVOKABLE QString generatePreviewMac() const;
+    QString generatePreviewMac() const;
 
 Q_SIGNALS:
     void macPolicyChanged();
     void macAddressChanged();
     void selectedVendorChanged();
-    void ipv6PrivacyChanged();
     void ipv6ModeChanged();
+    void vendorListChanged();
+    void perConnectionRandomChanged();
 
 private:
-    void initVendorDatabase();
-    QString getVendorOUI( const QString& vendorId ) const;
-
-    QWidget* m_widget = nullptr;
-    int m_macPolicy = 0;
-    QString m_macAddress;
-    QString m_selectedVendor;
-    bool m_ipv6Privacy = false;
-    int m_ipv6Mode = 0;
-    QList< VendorOUI > m_vendors;
+    Config    m_config;
+    MacPolicy m_macPolicy = MacPolicy::Disabled;
+    Ipv6Mode  m_ipv6Mode  = Ipv6Mode::Standard;
+    QString   m_macAddress;
+    QString   m_selectedVendor;
+    QWidget*  m_widget = nullptr;
 };
+
+}
 
 CALAMARES_PLUGIN_FACTORY_DECLARATION( NetPrivacyViewStepFactory )
 

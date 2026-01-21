@@ -1,66 +1,51 @@
-# netprivacy - Calamares Network Privacy Module
+<!-- SPDX-FileCopyrightText: 2026 VCPU
+     SPDX-License-Identifier: GPL-3.0-or-later -->
 
-Pre-network MAC spoofing and IPv6 privacy configuration for Calamares installers.
+# NetPrivacy Module
+
+Configures network privacy settings during installation.
 
 ## Features
 
-- **MAC Spoofing**: Disabled, Random, Vendor-targeted, or Fixed
-- **IPv6 Privacy**: Standard, Privacy Extensions (RFC 4941), or Disabled
-- 20 built-in vendor OUIs with support for custom vendors
-- Works with NetworkManager and systemd-networkd
-
-## Files Generated
-
-When enabled, the module writes configuration to the target system:
-
-**MAC Spoofing:**
-- `/usr/lib/NetworkManager/conf.d/80-calamares-mac-privacy.conf`
-- `/usr/lib/systemd/network/80-calamares-mac-privacy.link`
-- `/etc/NetworkManager/dispatcher.d/80-vendor-mac.sh` (vendor mode only)
-
-**IPv6 Privacy Extensions:**
-- `/usr/lib/NetworkManager/conf.d/80-calamares-ipv6-privacy.conf`
-- `/usr/lib/systemd/networkd.conf.d/80_ipv6-privacy-extensions.conf`
-
-**IPv6 Disabled:**
-- `/etc/sysctl.d/99-calamares-disable-ipv6.conf`
-
-## Build
-
-```bash
-mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr
-make
-sudo make install
-```
-
-## Integration
-
-Add to your `settings.conf`:
-
-```yaml
-sequence:
-  - show:
-      - welcome
-      - locale
-      - netprivacy   # <-- add here
-      - keyboard
-      - partition
-      - users
-      - summary
-  - exec:
-      - netprivacy   # <-- and here
-      - ...
-```
+- **MAC Address Randomization** - Prevents tracking across networks
+- **IPv6 Privacy Extensions** - RFC 4941 temporary addresses
 
 ## Configuration
 
-See `netprivacy.conf` for available options.
+Edit `netprivacy.conf` to set defaults:
 
-## License
+```yaml
+macPolicy: 0        # 0=Off, 1=Random, 2=Vendor, 3=Fixed
+ipv6Mode: 0         # 0=Standard, 1=Privacy, 2=Disable
+```
 
-GPL-3.0-or-later
+## Testing Without Installation
 
-## Author
+Test the module without running a real installation:
 
-JPShag (2025)
+```bash
+# Create test directory
+mkdir -p /tmp/netprivacy-test
+export NETPRIVACY_TEST_ROOT=/tmp/netprivacy-test
+
+# Run Calamares in debug mode
+sudo -E calamares -d
+```
+
+Then verify the generated configuration files:
+
+```bash
+cat /tmp/netprivacy-test/etc/NetworkManager/conf.d/80-calamares-mac.conf
+cat /tmp/netprivacy-test/etc/systemd/network/80-calamares-mac.link
+cat /tmp/netprivacy-test/etc/systemd/network/80-calamares-ipv6.network
+```
+
+## Generated Files
+
+| Path | Purpose |
+|------|---------|
+| `/etc/NetworkManager/conf.d/80-calamares-mac.conf` | MAC randomization (NetworkManager) |
+| `/etc/systemd/network/80-calamares-mac.link` | MAC randomization (systemd-networkd) |
+| `/etc/NetworkManager/conf.d/80-calamares-ipv6.conf` | IPv6 privacy (NetworkManager) |
+| `/etc/systemd/network/80-calamares-ipv6.network` | IPv6 privacy (systemd-networkd) |
+| `/etc/sysctl.d/99-calamares-ipv6.conf` | IPv6 disable (if selected) |

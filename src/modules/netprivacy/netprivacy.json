@@ -1,0 +1,7 @@
+/* SPDX-FileCopyrightText: 2026 VCPU
+   SPDX-License-Identifier: GPL-3.0-or-later */
+{
+    "IID": "io.calamares.ViewStep",
+    "className": "NetPrivacyViewStep",
+    "version": "1.0.0"
+}

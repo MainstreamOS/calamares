@@ -1,6 +1,7 @@
-# SPDX-FileCopyrightText: 2025 JPShag
+# SPDX-FileCopyrightText: 2026 VCPU
 # SPDX-License-Identifier: GPL-3.0-or-later
 ---
 type: viewmodule
 name: netprivacy
 interface: qtplugin
+load: libcalamares_viewmodule_netprivacy.so
