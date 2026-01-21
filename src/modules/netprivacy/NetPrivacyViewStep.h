@@ -25,6 +25,7 @@ class NetPrivacyViewStep : public Calamares::ViewStep
     Q_PROPERTY( bool perConnectionRandom READ perConnectionRandom WRITE setPerConnectionRandom NOTIFY perConnectionRandomChanged )
     Q_PROPERTY( QVariantList vendorList READ vendorList NOTIFY vendorListChanged )
     Q_PROPERTY( QString currentPreviewMac READ generatePreviewMac NOTIFY macPolicyChanged )
+    Q_PROPERTY( bool isVirtualMachine READ isVirtualMachine CONSTANT )
 
 public:
     explicit NetPrivacyViewStep( QObject* parent = nullptr );
@@ -54,6 +55,7 @@ public:
 
     QVariantList vendorList() const;
     QString generatePreviewMac() const;
+    bool isVirtualMachine() const;
 
 Q_SIGNALS:
     void macPolicyChanged();

@@ -28,6 +28,26 @@ Rectangle {
             width: parent.width
             spacing: 20
 
+            Rectangle {
+                Layout.fillWidth: true
+                visible: config.isVirtualMachine && config.macPolicy !== root.macOff
+                color: "#fff3cd"
+                border.color: "#ffc107"
+                border.width: 1
+                radius: 4
+                implicitHeight: vmWarnText.implicitHeight + 16
+
+                Text {
+                    id: vmWarnText
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    //: Warning shown when virtual machine is detected and MAC randomization is enabled
+                    text: qsTr("⚠ VM detected. MAC randomization may break DHCP after reboot.")
+                    wrapMode: Text.WordWrap
+                    color: "#856404"
+                }
+            }
+
             GroupBox {
                 title: qsTr("MAC Randomization")
                 Layout.fillWidth: true
@@ -76,6 +96,7 @@ Rectangle {
                             if (!model) return
                             for (var i = 0; i < model.length; ++i)
                                 if (model[i].id === config.selectedVendor) { currentIndex = i; return }
+                            currentIndex = 0
                         }
                     }
 
@@ -93,7 +114,7 @@ Rectangle {
                         placeholderText: "XX:XX:XX:XX:XX:XX"
                         text: config.macAddress
                         font.family: "monospace"
-                        onEditingFinished: config.macAddress = text
+                        onTextChanged: config.macAddress = text
                     }
 
                     Text {
@@ -108,9 +129,22 @@ Rectangle {
                     CheckBox {
                         Layout.leftMargin: 24
                         visible: config.macPolicy === root.macRandom || config.macPolicy === root.macVendor
-                        text: qsTr("Per-connection random")
+                        //: Option to randomize MAC per connection rather than using a fixed random MAC
+                        text: qsTr("Per-connection random (breaks DHCP)")
                         checked: config.perConnectionRandom
                         onToggled: config.perConnectionRandom = checked
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.topMargin: 8
+                        visible: config.macPolicy !== root.macOff
+                        //: Warning about potential issues with MAC randomization
+                        text: qsTr("May break VMs and servers with MAC restrictions.")
+                        wrapMode: Text.WordWrap
+                        font.italic: true
+                        opacity: 0.8
+                        color: pal.text
                     }
                 }
             }

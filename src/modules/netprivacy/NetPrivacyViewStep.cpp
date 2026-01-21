@@ -1,6 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 VCPU
    SPDX-License-Identifier: GPL-3.0-or-later */
 #include <QBoxLayout>
+#include <QFile>
 #include <QQmlContext>
 #include <QQuickWidget>
 #include <GlobalStorage.h>
@@ -146,10 +147,11 @@ void NetPrivacyViewStep::setMacPolicyInt( int p )
 
 void NetPrivacyViewStep::setMacAddress( const QString& addr )
 {
-    if ( !addr.isEmpty() && !Utils::isValidMac( addr ) ) return;
-    if ( m_macAddress != addr )
+    QString clean = addr.trimmed().toUpper();
+    if ( !clean.isEmpty() && !Utils::isValidMac( clean ) ) return;
+    if ( m_macAddress != clean )
     {
-        m_macAddress = addr;
+        m_macAddress = clean;
         Q_EMIT macAddressChanged();
         Q_EMIT nextStatusChanged( isNextEnabled() );
     }
@@ -167,6 +169,7 @@ void NetPrivacyViewStep::setSelectedVendor( const QString& v )
         m_selectedVendor = v;
         Q_EMIT selectedVendorChanged();
         Q_EMIT macPolicyChanged();
+        Q_EMIT nextStatusChanged( isNextEnabled() );
     }
 }
 
@@ -213,6 +216,31 @@ QString NetPrivacyViewStep::generatePreviewMac() const
             if ( v.id == m_selectedVendor )
                 return Utils::generateVendorMacSafe( v.oui );
     return QString();
+}
+
+bool NetPrivacyViewStep::isVirtualMachine() const
+{
+    QFile dmi( QStringLiteral( "/sys/class/dmi/id/product_name" ) );
+    if ( dmi.open( QIODevice::ReadOnly ) )
+    {
+        QString name = QString::fromUtf8( dmi.readAll() ).toLower().trimmed();
+        if ( name.contains( "virtualbox" ) || name.contains( "vmware" )
+             || name.contains( "qemu" ) || name.contains( "kvm" )
+             || name.contains( "virtual machine" ) || name.contains( "hyper-v" ) )
+            return true;
+    }
+
+    QFile vendor( QStringLiteral( "/sys/class/dmi/id/sys_vendor" ) );
+    if ( vendor.open( QIODevice::ReadOnly ) )
+    {
+        QString v = QString::fromUtf8( vendor.readAll() ).toLower().trimmed();
+        if ( v.contains( "vmware" ) || v.contains( "innotek" ) || v.contains( "oracle" )
+             || v.contains( "qemu" ) || v.contains( "microsoft corporation" )
+             || v.contains( "xen" ) || v.contains( "bochs" ) || v.contains( "parallels" ) )
+            return true;
+    }
+
+    return false;
 }
 
 }

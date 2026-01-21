@@ -22,7 +22,8 @@ NetPrivacyJob::NetPrivacyJob( MacPolicy macPolicy,
     , m_macPolicy( macPolicy )
     , m_ipv6Mode( ipv6Mode )
     , m_macAddress( macAddress )
-    , m_vendorOUI( vendorOUI )
+    , m_vendorOUI( macPolicy == MacPolicy::Vendor && !Utils::isValidOui( vendorOUI ) 
+                   ? Utils::kDefaultOui : vendorOUI )
     , m_writeNM( writeNM )
     , m_writeSystemd( writeSystemd )
     , m_perConnRandom( perConnRandom )
@@ -83,7 +84,7 @@ Calamares::JobResult NetPrivacyJob::writeMacConfig( const QString& root ) const
 {
     if ( !m_writeNM ) return Calamares::JobResult::ok();
 
-    QString c = "# Calamares NetPrivacy\n\n";
+    QString c = "# Calamares NetPrivacy - MAC Randomization\n\n";
 
     if ( m_macPolicy == MacPolicy::Random || m_macPolicy == MacPolicy::Vendor )
     {
@@ -113,7 +114,7 @@ Calamares::JobResult NetPrivacyJob::writeSystemdLinkConfig( const QString& root 
 {
     if ( !m_writeSystemd ) return Calamares::JobResult::ok();
 
-    QString c = "# Calamares NetPrivacy\n\n";
+    QString c = "# Calamares NetPrivacy - MAC Randomization\n\n";
     c += "[Match]\nOriginalName=*\n";
     c += "Type=!loopback !bridge !bond !vlan !tunnel\n";
     c += "Name=!docker* !veth* !br-* !virbr* !lxc*\n\n";
@@ -133,7 +134,7 @@ Calamares::JobResult NetPrivacyJob::writeIpv6Config( const QString& root ) const
 {
     if ( m_ipv6Mode == Ipv6Mode::Ipv6Disabled )
     {
-        QString c = "# Calamares NetPrivacy\n";
+        QString c = "# Calamares NetPrivacy - IPv6 disabled\n";
         c += "net.ipv6.conf.all.disable_ipv6 = 1\n";
         c += "net.ipv6.conf.default.disable_ipv6 = 1\n";
         c += "net.ipv6.conf.lo.disable_ipv6 = 1\n";
@@ -144,14 +145,14 @@ Calamares::JobResult NetPrivacyJob::writeIpv6Config( const QString& root ) const
     {
         if ( m_writeNM )
         {
-            QString c = "# Calamares NetPrivacy\n\n[connection]\nipv6.ip6-privacy=2\n";
+            QString c = "# Calamares NetPrivacy - IPv6 Privacy Extensions\n\n[connection]\nipv6.ip6-privacy=2\n";
             if ( auto r = Utils::writeAtomicFile( Utils::nmIpv6ConfPath( root ), c ); !r )
                 return r;
         }
 
         if ( m_writeSystemd )
         {
-            QString c = "# Calamares NetPrivacy\n\n";
+            QString c = "# Calamares NetPrivacy - IPv6 Privacy Extensions\n\n";
             c += "[Match]\nName=*\n\n[Network]\nIPv6PrivacyExtensions=prefer-temporary\n";
             if ( auto r = Utils::writeAtomicFile( Utils::networkdIpv6ConfPath( root ), c ); !r )
                 return r;
