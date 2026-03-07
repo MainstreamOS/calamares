@@ -160,6 +160,7 @@ GroupTests::testJobCreation()
     // Needs some setup
     c.setFullName( QStringLiteral( "Goodluck Jonathan" ) );
     c.setLoginName( QStringLiteral( "goodj" ) );
+    c.setBirthDate( QDate( 2000, 1, 1 ) );
     QVERIFY( c.isReady() );
 
     QCOMPARE( c.sudoersGroup(), QString() );

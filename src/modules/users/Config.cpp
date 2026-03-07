@@ -590,6 +590,17 @@ Config::setUserPasswordSecondary( const QString& s )
     }
 }
 
+void
+Config::setBirthDate( const QDate& d )
+{
+    if ( d != m_birthDate )
+    {
+        m_birthDate = d;
+        emit birthDateChanged( d );
+        checkReady();
+    }
+}
+
 /** @brief Checks two copies of the password for validity
  *
  * Given two copies of the password -- generally the password and
@@ -768,7 +779,8 @@ Config::isReady() const
     bool readyUsername = !loginName().isEmpty() && loginNameStatus().isEmpty();  // .. no warning message
     bool readyUserPassword = userPasswordValidity() != Config::PasswordValidity::Invalid;
     bool readyRootPassword = rootPasswordValidity() != Config::PasswordValidity::Invalid;
-    return readyFullName && readyHostname && readyUsername && readyUserPassword && readyRootPassword;
+    bool readyBirthDate = !m_enableBirthDate || m_birthDate.isValid();
+    return readyFullName && readyHostname && readyUsername && readyUserPassword && readyRootPassword && readyBirthDate;
 }
 
 /** @brief Update ready status and emit signal
@@ -1039,6 +1051,8 @@ Config::setConfigurationMap( const QVariantMap& configurationMap )
     m_requireStrongPasswords
         = !m_permitWeakPasswords || !Calamares::getBool( configurationMap, "allowWeakPasswordsDefault", false );
 
+    m_enableBirthDate = Calamares::getBool( configurationMap, "enableBirthDate", true );
+
     // If the value doesn't exist, or isn't a map, this gives an empty map -- no problem
     auto pr_checks( configurationMap.value( "passwordRequirements" ).toMap() );
     for ( decltype( pr_checks )::const_iterator i = pr_checks.constBegin(); i != pr_checks.constEnd(); ++i )
@@ -1065,6 +1079,10 @@ Config::finalizeGlobalStorage() const
         gs->insert( "reuseRootPassword", reuseUserPasswordForRoot() );
     }
     gs->insert( "password", Calamares::String::obscure( userPassword() ) );
+    if ( m_birthDate.isValid() )
+    {
+        gs->insert( "birthDate", m_birthDate.toString( Qt::ISODate ) );
+    }
 }
 
 Calamares::JobList

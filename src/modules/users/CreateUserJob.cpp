@@ -168,5 +168,47 @@ CreateUserJob::exec()
         return commandResult.explainProcess( "chown", std::chrono::seconds( 10 ) /* bogus timeout */ );
     }
 
+    if ( m_config->birthDate().isValid() )
+    {
+        Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
+        QString rootMountPoint = gs->value( "rootMountPoint" ).toString();
+        QString accountsDir = rootMountPoint + "/var/lib/AccountsService/users";
+        QDir().mkpath( accountsDir );
+
+        QString keyfilePath = accountsDir + "/" + m_config->loginName();
+        QFile keyfile( keyfilePath );
+
+        // Read existing content (displaymanager module may have written it)
+        QString userfileContents;
+        if ( keyfile.open( QIODevice::ReadOnly | QIODevice::Text ) )
+        {
+            userfileContents = QTextStream( &keyfile ).readAll();
+            keyfile.close();
+        }
+
+        if ( keyfile.open( QIODevice::WriteOnly | QIODevice::Text ) )
+        {
+            QTextStream stream( &keyfile );
+            if ( userfileContents.isEmpty() )
+            {
+                userfileContents = "[User]\n";
+            }
+            else if ( !userfileContents.contains( "[User]" ) )
+            {
+                if ( !userfileContents.endsWith( '\n' ) )
+                {
+                    userfileContents += '\n';
+                }
+                userfileContents += "[User]\n";
+            }
+            else if ( !userfileContents.endsWith( '\n' ) )
+            {
+                userfileContents += '\n';
+            }
+            stream << userfileContents;
+            stream << "BirthDate=" << m_config->birthDate().toString( Qt::ISODate ) << "\n";
+        }
+    }
+
     return Calamares::JobResult::ok();
 }

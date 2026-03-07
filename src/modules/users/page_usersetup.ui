@@ -218,6 +218,50 @@ SPDX-License-Identifier: GPL-3.0-or-later
     </spacer>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="birthDateLayout">
+     <item>
+      <widget class="QLabel" name="labelBirthDate">
+       <property name="text">
+        <string>Date of birth</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QDateEdit" name="dateEditBirthDate">
+       <property name="displayFormat">
+        <string>yyyy-MM-dd</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+       <property name="date">
+        <date>
+         <year>2000</year>
+         <month>1</month>
+         <day>1</day>
+        </date>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="birthDateVSpace">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>6</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
     <widget class="QLabel" name="hostnameLabel">
      <property name="text">
       <string>What is the name of this computer?</string>

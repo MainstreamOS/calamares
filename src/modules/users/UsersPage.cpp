@@ -29,6 +29,7 @@
 #include "utils/String.h"
 
 #include <QBoxLayout>
+#include <QDateEdit>
 #include <QFile>
 #include <QLabel>
 #include <QLineEdit>
@@ -135,6 +136,15 @@ UsersPage::UsersPage( Config* config, QWidget* parent )
     connect( ui->textBoxLoginName, &QLineEdit::textEdited, config, &Config::setLoginName );
     connect( config, &Config::loginNameChanged, ui->textBoxLoginName, &QLineEdit::setText );
     connect( config, &Config::loginNameStatusChanged, this, &UsersPage::reportLoginNameStatus );
+
+    ui->dateEditBirthDate->setVisible( config->enableBirthDate() );
+    ui->labelBirthDate->setVisible( config->enableBirthDate() );
+    if ( config->enableBirthDate() )
+    {
+        ui->dateEditBirthDate->setDate( QDate( 2000, 1, 1 ) );
+        connect( ui->dateEditBirthDate, &QDateEdit::dateChanged, config, &Config::setBirthDate );
+        config->setBirthDate( ui->dateEditBirthDate->date() );
+    }
 
     ui->checkBoxDoAutoLogin->setVisible( m_config->displayAutoLogin() );
     ui->checkBoxDoAutoLogin->setChecked( m_config->doAutoLogin() );

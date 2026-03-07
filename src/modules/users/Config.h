@@ -16,6 +16,7 @@
 #include "modulesystem/Config.h"
 #include "utils/NamedEnum.h"
 
+#include <QDate>
 #include <QList>
 #include <QObject>
 #include <QVariantMap>
@@ -105,6 +106,9 @@ class PLUGINDLLEXPORT Config : public Calamares::ModuleSystem::Config
     Q_PROPERTY( HostNameAction hostnameAction READ hostnameAction CONSTANT )
 
     Q_PROPERTY( QString userPassword READ userPassword WRITE setUserPassword NOTIFY userPasswordChanged )
+
+    Q_PROPERTY( QDate birthDate READ birthDate WRITE setBirthDate NOTIFY birthDateChanged )
+    Q_PROPERTY( bool enableBirthDate READ enableBirthDate CONSTANT )
     Q_PROPERTY( QString userPasswordSecondary READ userPasswordSecondary WRITE setUserPasswordSecondary NOTIFY
                     userPasswordSecondaryChanged )
     Q_PROPERTY( int userPasswordValidity READ userPasswordValidity NOTIFY userPasswordStatusChanged STORED false )
@@ -246,6 +250,12 @@ public:
 
     // The user enters a password (and again in a separate UI element)
     QString userPassword() const { return m_userPassword; }
+
+    /// The user's birth date (optional, enabled via configuration)
+    QDate birthDate() const { return m_birthDate; }
+
+    /// Whether the birth-date field is enabled in configuration
+    bool enableBirthDate() const { return m_enableBirthDate; }
     QString userPasswordSecondary() const { return m_userPasswordSecondary; }
     int userPasswordValidity() const;
     QString userPasswordMessage() const;
@@ -302,6 +312,8 @@ public Q_SLOTS:
 
     void setUserPassword( const QString& );
     void setUserPasswordSecondary( const QString& );
+
+    void setBirthDate( const QDate& );
     void setRootPassword( const QString& );
     void setRootPasswordSecondary( const QString& );
 
@@ -326,6 +338,7 @@ signals:
     void userPasswordChanged( const QString& );
     void userPasswordSecondaryChanged( const QString& );
     void userPasswordStatusChanged( int, const QString& );
+    void birthDateChanged( const QDate& );
     void rootPasswordChanged( const QString& );
     void rootPasswordSecondaryChanged( const QString& );
     void rootPasswordStatusChanged( int, const QString& );
@@ -347,6 +360,8 @@ private:
 
     QString m_userPassword;
     QString m_userPasswordSecondary;  // enter again to be sure
+    QDate m_birthDate;
+    bool m_enableBirthDate = true;
     QString m_rootPassword;
     QString m_rootPasswordSecondary;
 

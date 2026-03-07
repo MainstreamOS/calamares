@@ -453,8 +453,21 @@ class DMgdm(DisplayManager):
                     )
             userfile_path = "{!s}/{!s}".format(accountservice_dir, username)
             if os.path.exists(accountservice_dir):
+                # Read existing content to preserve fields written by other modules
+                userfile_contents = ""
+                if os.path.exists(userfile_path):
+                    with open(userfile_path, "r") as userfile:
+                        userfile_contents = userfile.read()
+
                 with open(userfile_path, "w") as userfile:
-                    userfile.write("[User]\n")
+                    if not userfile_contents:
+                        userfile_contents = "[User]\n"
+                    else:
+                        if not userfile_contents.endswith("\n"):
+                            userfile_contents += "\n"
+                        if "[User]" not in userfile_contents:
+                            userfile_contents += "[User]\n"
+                    userfile.write(userfile_contents)
 
                     if default_desktop_environment is not None:
                         userfile.write("XSession={!s}\n".format(
