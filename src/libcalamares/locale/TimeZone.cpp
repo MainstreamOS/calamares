@@ -180,7 +180,7 @@ loadTZData( RegionVector& regions, ZoneVector& zones, QTextStream& in )
  *
  * The algorithm picks the wrong place. This is for instance annoying
  * when clicking on Cape Town, you get Maseru, and to get Johannesburg
- * you need to click somewhere very carefully north of Maserru.
+ * you need to click somewhere very carefully north of Maseru.
  *
  * These alternate zones are used to introduce "extra locations"
  * into the timezone database, in order to influence the closest-location
