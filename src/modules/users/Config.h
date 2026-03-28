@@ -361,7 +361,7 @@ private:
     QString m_userPassword;
     QString m_userPasswordSecondary;  // enter again to be sure
     QDate m_birthDate;
-    bool m_enableBirthDate = true;
+    bool m_enableBirthDate = false;
     QString m_rootPassword;
     QString m_rootPasswordSecondary;
 

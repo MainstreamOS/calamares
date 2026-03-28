@@ -139,12 +139,14 @@ UsersPage::UsersPage( Config* config, QWidget* parent )
 
     ui->dateEditBirthDate->setVisible( config->enableBirthDate() );
     ui->labelBirthDate->setVisible( config->enableBirthDate() );
+#ifdef WITH_BIRTHDATE
     if ( config->enableBirthDate() )
     {
         ui->dateEditBirthDate->setDate( QDate( 2000, 1, 1 ) );
         connect( ui->dateEditBirthDate, &QDateEdit::dateChanged, config, &Config::setBirthDate );
         config->setBirthDate( ui->dateEditBirthDate->date() );
     }
+#endif
 
     ui->checkBoxDoAutoLogin->setVisible( m_config->displayAutoLogin() );
     ui->checkBoxDoAutoLogin->setChecked( m_config->doAutoLogin() );

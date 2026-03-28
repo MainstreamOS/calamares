@@ -90,6 +90,7 @@ option(WITH_PYBIND11 "Use bundled pybind11 instead of Boost::Python" ON)
 option(WITH_PYTHON "Enable Python modules API." ON)
 option(WITH_QML "Enable QML UI options." ON)
 option(WITH_QT6 "Use Qt6 instead of Qt5" ON)
+option(WITH_BIRTHDATE "Enable optional birth-date field in the users module" OFF)
 #
 # Additional parts to build that do not affect ABI
 option(BUILD_SCHEMA_TESTING "Enable schema-validation-tests" ON)
@@ -531,6 +532,7 @@ set(Calamares_WITH_PYBIND11 ${WITH_PYBIND11})
 set(Calamares_WITH_BOOST_PYTHON ${WITH_BOOST_PYTHON})
 set(Calamares_WITH_QML ${WITH_QML})
 set(Calamares_WITH_QT6 ${WITH_QT6})
+set(Calamares_WITH_BIRTHDATE ${WITH_BIRTHDATE})
 
 # Bail out if we are missing something important
 feature_summary(

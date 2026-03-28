@@ -79,6 +79,9 @@ target_link_libraries(users_internal
         ${qtname}::Widgets
 )
 target_compile_definitions(users_internal PUBLIC PLUGINDLLEXPORT_PRO)
+if(WITH_BIRTHDATE)
+    target_compile_definitions(users_internal PUBLIC WITH_BIRTHDATE)
+endif()
 target_compile_options(users_internal PUBLIC -fPIC)
 calamares_automoc(users_internal)
 

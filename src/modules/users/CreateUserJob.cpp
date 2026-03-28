@@ -170,6 +170,7 @@ CreateUserJob::exec()
 
     if ( m_config->birthDate().isValid() )
     {
+#ifdef WITH_BIRTHDATE
         Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
         QString rootMountPoint = gs->value( "rootMountPoint" ).toString();
         QString accountsDir = rootMountPoint + "/var/lib/AccountsService/users";
@@ -208,6 +209,7 @@ CreateUserJob::exec()
             stream << userfileContents;
             stream << "BirthDate=" << m_config->birthDate().toString( Qt::ISODate ) << "\n";
         }
+#endif
     }
 
     return Calamares::JobResult::ok();

@@ -593,12 +593,16 @@ Config::setUserPasswordSecondary( const QString& s )
 void
 Config::setBirthDate( const QDate& d )
 {
+#ifdef WITH_BIRTHDATE
     if ( d != m_birthDate )
     {
         m_birthDate = d;
         emit birthDateChanged( d );
         checkReady();
     }
+#else
+    Q_UNUSED( d )
+#endif
 }
 
 /** @brief Checks two copies of the password for validity
@@ -1051,7 +1055,10 @@ Config::setConfigurationMap( const QVariantMap& configurationMap )
     m_requireStrongPasswords
         = !m_permitWeakPasswords || !Calamares::getBool( configurationMap, "allowWeakPasswordsDefault", false );
 
-    m_enableBirthDate = Calamares::getBool( configurationMap, "enableBirthDate", true );
+    m_enableBirthDate = Calamares::getBool( configurationMap, "enableBirthDate", false );
+#ifndef WITH_BIRTHDATE
+    m_enableBirthDate = false;
+#endif
 
     // If the value doesn't exist, or isn't a map, this gives an empty map -- no problem
     auto pr_checks( configurationMap.value( "passwordRequirements" ).toMap() );
@@ -1079,10 +1086,12 @@ Config::finalizeGlobalStorage() const
         gs->insert( "reuseRootPassword", reuseUserPasswordForRoot() );
     }
     gs->insert( "password", Calamares::String::obscure( userPassword() ) );
+#ifdef WITH_BIRTHDATE
     if ( m_birthDate.isValid() )
     {
         gs->insert( "birthDate", m_birthDate.toString( Qt::ISODate ) );
     }
+#endif
 }
 
 Calamares::JobList
