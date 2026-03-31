@@ -277,6 +277,10 @@ ModuleManager::loadModules()
                 }
 
                 evs->appendJobModuleInstanceKey( instanceKey );
+                if ( descriptor.showInSidebar() )
+                {
+                    ViewManager::instance()->addJobModuleSidebarEntry( instanceKey, descriptor.prettyName() );
+                }
             }
         }
     }

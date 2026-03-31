@@ -190,7 +190,7 @@ ExecutionViewStep::onActivate()
                     j->setEmergency( true );
                 }
             }
-            queue->enqueue( weight, jl );
+            queue->enqueue( weight, jl, instanceKey.toString() );
         }
     }
 

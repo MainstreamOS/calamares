@@ -79,6 +79,7 @@ public:
      * or more view pages, plus zero or more jobs which may be created at runtime.
      */
     void addViewStep( ViewStep* step );
+    void addJobModuleSidebarEntry( const ModuleSystem::InstanceKey& key, const QString& displayName );
 
     /**
      * @brief viewSteps returns the list of currently present view steps.
@@ -247,13 +248,25 @@ private:
     void updateButtonLabels();
     void updateCancelEnabled( bool enabled );
     void updateBackAndNextVisibility( bool visible );
+    void onModuleStarted( const QString& moduleKey );
 
     inline bool currentStepValid() const { return ( 0 <= m_currentStep ) && ( m_currentStep < m_steps.length() ); }
 
     static ViewManager* s_instance;
 
+    struct SidebarItem
+    {
+        enum class Kind { ViewStep, JobModule } kind;
+        ViewStep* step = nullptr;
+        QString name;
+        ModuleSystem::InstanceKey key;
+    };
+
     ViewStepList m_steps;
     int m_currentStep;
+
+    QList< SidebarItem > m_sidebarItems;
+    int m_currentSidebarItem = -1;
 
     QWidget* m_widget;
     QStackedWidget* m_stack;

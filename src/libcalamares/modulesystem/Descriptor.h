@@ -78,6 +78,9 @@ public:
     int weight() const { return m_weight < 1 ? 1 : m_weight; }
     bool explicitWeight() const { return m_weight > 0; }
 
+    bool showInSidebar() const { return m_showInSidebar; }
+    QString prettyName() const { return m_prettyName.isEmpty() ? m_name : m_prettyName; }
+
 
     /// @brief The directory where the module.desc lives
     QString directory() const { return m_directory; }
@@ -140,6 +143,9 @@ private:
 
     int m_processTimeout = 30;
     bool m_processChroot = false;
+
+    bool m_showInSidebar = false;
+    QString m_prettyName;
 };
 
 }  // namespace ModuleSystem

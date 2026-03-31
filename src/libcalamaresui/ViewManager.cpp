@@ -90,6 +90,7 @@ ViewManager::ViewManager( QObject* parent )
 
     connect( JobQueue::instance(), &JobQueue::failed, this, &ViewManager::onInstallationFailed );
     connect( JobQueue::instance(), &JobQueue::finished, this, &ViewManager::next );
+    connect( JobQueue::instance(), &JobQueue::moduleStarted, this, &ViewManager::onModuleStarted );
 
     CALAMARES_RETRANSLATE_SLOT( &ViewManager::updateButtonLabels );
 
@@ -126,7 +127,8 @@ ViewManager::addViewStep( ViewStep* step )
 void
 ViewManager::insertViewStep( int before, ViewStep* step )
 {
-    emit beginInsertRows( QModelIndex(), before, before );
+    int sidebarPos = m_sidebarItems.size();
+    emit beginInsertRows( QModelIndex(), sidebarPos, sidebarPos );
     m_steps.insert( before, step );
     connect( step, &ViewStep::ensureSize, this, &ViewManager::ensureSize );
     connect( step, &ViewStep::nextStatusChanged, this, &ViewManager::updateNextStatus );
@@ -148,6 +150,10 @@ ViewManager::insertViewStep( int before, ViewStep* step )
         m_stack->setCurrentIndex( 0 );
         step->widget()->setFocus();
     }
+    SidebarItem si;
+    si.kind = SidebarItem::Kind::ViewStep;
+    si.step = step;
+    m_sidebarItems.append( si );
     emit endInsertRows();
 }
 
@@ -364,6 +370,7 @@ ViewManager::next()
             }
         }
 
+        m_currentSidebarItem = -1;
         m_currentStep++;
 
         m_stack->setCurrentIndex( m_currentStep );  // Does nothing if out of range
@@ -574,12 +581,46 @@ ViewManager::data( const QModelIndex& index, int role ) const
         return QVariant();
     }
 
-    if ( ( index.row() < 0 ) || ( index.row() >= m_steps.length() ) )
+    const int row = index.row();
+    if ( row < 0 || row >= m_sidebarItems.size() )
     {
         return QVariant();
     }
 
-    const auto* step = m_steps.at( index.row() );
+    const auto& item = m_sidebarItems.at( row );
+
+    if ( role == ProgressTreeItemCurrentIndex )
+    {
+        if ( m_currentSidebarItem >= 0 )
+        {
+            return m_currentSidebarItem;
+        }
+        if ( currentStepValid() )
+        {
+            const auto* vs = m_steps.at( m_currentStep );
+            for ( int i = 0; i < m_sidebarItems.size(); ++i )
+            {
+                if ( m_sidebarItems.at( i ).kind == SidebarItem::Kind::ViewStep
+                     && m_sidebarItems.at( i ).step == vs )
+                {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    if ( item.kind == SidebarItem::Kind::JobModule )
+    {
+        if ( role == Qt::DisplayRole )
+        {
+            return item.name;
+        }
+        return QVariant();
+    }
+
+    // ViewStep item
+    const auto* step = item.step;
     if ( !step )
     {
         return QVariant();
@@ -609,8 +650,6 @@ ViewManager::data( const QModelIndex& index, int role ) const
         {
             return QVariant();
         }
-    case ProgressTreeItemCurrentIndex:
-        return m_currentStep;
     default:
         return QVariant();
     }
@@ -623,7 +662,32 @@ ViewManager::rowCount( const QModelIndex& parent ) const
     {
         return 0;
     }
-    return m_steps.length();
+    return m_sidebarItems.size();
+}
+
+void
+ViewManager::addJobModuleSidebarEntry( const ModuleSystem::InstanceKey& key, const QString& displayName )
+{
+    SidebarItem si;
+    si.kind = SidebarItem::Kind::JobModule;
+    si.name = displayName;
+    si.key = key;
+    m_sidebarItems.append( si );
+}
+
+void
+ViewManager::onModuleStarted( const QString& moduleKey )
+{
+    for ( int i = 0; i < m_sidebarItems.size(); ++i )
+    {
+        if ( m_sidebarItems.at( i ).kind == SidebarItem::Kind::JobModule
+             && m_sidebarItems.at( i ).key.toString() == moduleKey )
+        {
+            m_currentSidebarItem = i;
+            emit currentStepChanged();
+            return;
+        }
+    }
 }
 
 bool

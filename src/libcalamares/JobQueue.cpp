@@ -350,6 +350,7 @@ struct WeightedJob
     qreal weight = 0.0;
 
     job_ptr job;
+    QString moduleKey;
 };
 using WeightedJobList = QList< WeightedJob >;
 
@@ -389,7 +390,7 @@ public:
         }
     }
 
-    void enqueue( int moduleWeight, const JobList& jobs )
+    void enqueue( int moduleWeight, const JobList& jobs, const QString& moduleKey = QString() )
     {
         Calamares::MutexLocker qlock( &m_enqueMutex );
 
@@ -409,7 +410,7 @@ public:
         for ( const auto& j : jobs )
         {
             qreal jobContribution = ( j->getJobWeight() / totalJobWeight ) * moduleWeight;
-            m_queuedJobs->append( WeightedJob { cumulative, jobContribution, j } );
+            m_queuedJobs->append( WeightedJob { cumulative, jobContribution, j, moduleKey } );
             cumulative += jobContribution;
         }
     }
@@ -423,8 +424,15 @@ public:
 
         Logger::Once o;
         m_jobIndex = 0;
+        QString currentModuleKey;
         for ( const auto& jobitem : *m_runningJobs )
         {
+            if ( !jobitem.moduleKey.isEmpty() && jobitem.moduleKey != currentModuleKey )
+            {
+                currentModuleKey = jobitem.moduleKey;
+                QMetaObject::invokeMethod(
+                    m_queue, "moduleStarted", Qt::QueuedConnection, Q_ARG( QString, currentModuleKey ) );
+            }
             if ( failureEncountered && !jobitem.job->isEmergency() )
             {
                 cDebug() << o << "Skipping non-emergency job" << jobitem.job->prettyName();
@@ -590,10 +598,10 @@ JobQueue::start()
 
 
 void
-JobQueue::enqueue( int moduleWeight, const JobList& jobs )
+JobQueue::enqueue( int moduleWeight, const JobList& jobs, const QString& moduleKey )
 {
     Q_ASSERT( !m_thread->isRunning() );
-    m_thread->enqueue( moduleWeight, jobs );
+    m_thread->enqueue( moduleWeight, jobs, moduleKey );
     emit queueChanged( m_thread->queuedJobs() );
 }
 

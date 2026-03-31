@@ -96,8 +96,10 @@ Descriptor::fromDescriptorData( const QVariantMap& moduleDesc, const QString& de
     d.m_hasConfig = !Calamares::getBool( moduleDesc, "noconfig", false );  // Inverted logic during load
     d.m_requiredModules = Calamares::getStringList( moduleDesc, "requiredModules" );
     d.m_weight = int( Calamares::getInteger( moduleDesc, "weight", -1 ) );
+    d.m_showInSidebar = Calamares::getBool( moduleDesc, "sidebar", false );
+    d.m_prettyName = Calamares::getString( moduleDesc, "pretty-name" );
 
-    QStringList consumedKeys { "type", "interface", "name", "emergency", "noconfig", "requiredModules", "weight" };
+    QStringList consumedKeys { "type", "interface", "name", "emergency", "noconfig", "requiredModules", "weight", "sidebar", "pretty-name" };
 
     switch ( d.interface() )
     {

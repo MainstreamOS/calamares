@@ -60,7 +60,7 @@ public:
      * The total weight of the jobs is spread out to fill the weight
      * of the module.
      */
-    void enqueue( int moduleWeight, const JobList& jobs );
+    void enqueue( int moduleWeight, const JobList& jobs, const QString& moduleKey = QString() );
     /** @brief Starts all the jobs that are enqueued.
      *
      * After this, isRunning() returns @c true until
@@ -100,6 +100,12 @@ signals:
      * primarily for debugging purposes.
      */
     void queueChanged( const QStringList& jobNames );
+
+    /** @brief Module starts executing
+     *
+     * Emitted when a module starts and moduleKey is set
+     */
+    void moduleStarted( const QString& moduleKey );
 
 public Q_SLOTS:
     /** @brief Implementation detail
