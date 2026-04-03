@@ -166,7 +166,8 @@ populate_libcalamares( py::module_& m )
         .def_readonly( "pretty_name", &Calamares::Python::JobProxy::prettyName )
         .def_readonly( "working_path", &Calamares::Python::JobProxy::workingPath )
         .def_readonly( "configuration", &Calamares::Python::JobProxy::configuration )
-        .def( "setprogress", &Calamares::Python::JobProxy::setprogress );
+        .def( "setprogress", &Calamares::Python::JobProxy::setprogress )
+        .def( "setprettyname", &Calamares::Python::JobProxy::setprettyname );
 
     py::class_< Calamares::Python::GlobalStorageProxy >( m, "GlobalStorage" )
         .def( py::init( []( std::nullptr_t ) { return new Calamares::Python::GlobalStorageProxy( nullptr ); } ) )
@@ -199,6 +200,7 @@ struct Job::Private
     QVariantMap configurationMap;  // The module configuration
 
     QString description;  // Obtained from the Python code
+    double lastProgress = 0.0;
 };
 
 Job::Job( const QString& scriptFile,
@@ -404,8 +406,15 @@ Job::configuration() const
 void
 Job::emitProgress( double progressValue )
 {
-    // TODO: update prettyname
+    m_d->lastProgress = progressValue;
     emit progress( progressValue );
+}
+
+void
+Job::setPrettyName( const QString& name )
+{
+    m_d->description = name;
+    emit progress( m_d->lastProgress );
 }
 
 /** @brief Sets the pre-run Python code for all PythonJobs

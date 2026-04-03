@@ -59,6 +59,7 @@ namespace Python __attribute__( ( visibility( "hidden" ) ) )
         Dictionary configuration;
 
         void setprogress( qreal progress );
+        void setprettyname( const std::string& name );
 
     private:
         Calamares::Python::Job* m_parent;

@@ -248,6 +248,12 @@ JobProxy::setprogress( qreal progress )
     }
 }
 
+void
+JobProxy::setprettyname( const std::string& name )
+{
+    m_parent->setPrettyName( QString::fromStdString( name ) );
+}
+
 
 Calamares::GlobalStorage* GlobalStorageProxy::s_gs_instance = nullptr;
 

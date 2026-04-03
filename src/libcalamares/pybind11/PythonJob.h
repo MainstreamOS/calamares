@@ -62,6 +62,7 @@ public:
     QVariantMap configuration() const;
     /** @brief Proxy functions */
     void emitProgress( double progressValue );
+    void setPrettyName( const QString& name );
 
 private:
     struct Private;
