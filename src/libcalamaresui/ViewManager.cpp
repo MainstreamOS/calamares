@@ -672,7 +672,10 @@ ViewManager::addJobModuleSidebarEntry( const ModuleSystem::InstanceKey& key, con
     si.kind = SidebarItem::Kind::JobModule;
     si.name = displayName;
     si.key = key;
+    const int row = m_sidebarItems.size();
+    emit beginInsertRows( QModelIndex(), row, row );
     m_sidebarItems.append( si );
+    emit endInsertRows();
 }
 
 void
