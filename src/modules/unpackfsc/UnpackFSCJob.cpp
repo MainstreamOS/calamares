@@ -105,24 +105,47 @@ UnpackFSCJob::exec()
         return Calamares::JobResult::ok();
     }
 
+    // override module config from globalstorage 
+    QString source = m_source;
+    Type type = m_type;
+
+    Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
+    const QString gsSource   = gs->value( "unpackfscSource" ).toString();
+    const QString gsSourcefs = gs->value( "unpackfscSourcefs" ).toString();
+    if ( !gsSource.isEmpty() && !gsSourcefs.isEmpty() )
+    {
+        bool bogus = false;
+        Type gsType = typeNames().find( gsSourcefs, bogus );
+        if ( gsType != Type::None )
+        {
+            cDebug() << "unpackfsc: GlobalStorage override source=" << gsSource << "sourcefs=" << gsSourcefs;
+            source = gsSource;
+            type   = gsType;
+        }
+        else
+        {
+            cWarning() << "unpackfsc: unknown GlobalStorage sourcefs '" << gsSourcefs << "', using config values";
+        }
+    }
+
     cScopedAssignment messageClearer( &m_progressMessage, QString() );
     std::unique_ptr< Runner > r;
-    switch ( m_type )
+    switch ( type )
     {
     case Type::Erofs:
-        r = std::make_unique< ErofsRunner >( m_source, m_destination );
+        r = std::make_unique< ErofsRunner >( source, m_destination );
         break;
     case Type::FSArchive:
-        r = std::make_unique< FSArchiverDirRunner >( m_source, m_destination );
+        r = std::make_unique< FSArchiverDirRunner >( source, m_destination );
         break;
     case Type::FSArchiveFS:
-        r = std::make_unique< FSArchiverFSRunner >( m_source, m_destination );
+        r = std::make_unique< FSArchiverFSRunner >( source, m_destination );
         break;
     case Type::Squashfs:
-        r = std::make_unique< UnsquashRunner >( m_source, m_destination );
+        r = std::make_unique< UnsquashRunner >( source, m_destination );
         break;
     case Type::Tarball:
-        r = std::make_unique< TarballRunner >( m_source, m_destination );
+        r = std::make_unique< TarballRunner >( source, m_destination );
         break;
     case Type::None:
     default:
