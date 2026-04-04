@@ -111,20 +111,20 @@ UnpackFSCJob::exec()
 
     Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
     const QString gsSource   = gs->value( "unpackfscSource" ).toString();
-    const QString gsSourcefs = gs->value( "unpackfscSourcefs" ).toString();
-    if ( !gsSource.isEmpty() && !gsSourcefs.isEmpty() )
+    const QString gsSourceType = gs->value( "unpackfscSourceType" ).toString();
+    if ( !gsSource.isEmpty() && !gsSourceType.isEmpty() )
     {
         bool bogus = false;
-        Type gsType = typeNames().find( gsSourcefs, bogus );
+        Type gsType = typeNames().find( gsSourceType, bogus );
         if ( gsType != Type::None )
         {
-            cDebug() << "unpackfsc: GlobalStorage override source=" << gsSource << "sourcefs=" << gsSourcefs;
+            cDebug() << "unpackfsc: GlobalStorage override source=" << gsSource << "sourceType=" << gsSourceType;
             source = gsSource;
             type   = gsType;
         }
         else
         {
-            cWarning() << "unpackfsc: unknown GlobalStorage sourcefs '" << gsSourcefs << "', using config values";
+            cWarning() << "unpackfsc: unknown GlobalStorage sourceType '" << gsSourceType << "', using config values";
         }
     }
 
