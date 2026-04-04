@@ -277,9 +277,13 @@ ModuleManager::loadModules()
                 }
 
                 evs->appendJobModuleInstanceKey( instanceKey );
-                if ( descriptor.showInSidebar() )
+                const bool showInSidebar = descriptor.showInSidebar()
+                    || thisModule->configurationMap().value( "sidebar", false ).toBool();
+                if ( showInSidebar )
                 {
-                    ViewManager::instance()->addJobModuleSidebarEntry( instanceKey, descriptor.prettyName() );
+                    const QString displayName = thisModule->configurationMap()
+                        .value( "sidebar-name", descriptor.sidebarName() ).toString();
+                    ViewManager::instance()->addJobModuleSidebarEntry( instanceKey, displayName );
                 }
             }
         }
