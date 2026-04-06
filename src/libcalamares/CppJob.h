@@ -36,6 +36,13 @@ public:
     virtual void setConfigurationMap( const QVariantMap& configurationMap );
 
 protected:
+    /** @brief Returns merged module configuration 
+     *
+     * Reads moduleConfigOverrides from GlobalStorage (a map of maps keyed by
+     * module name) and merges to the module config. 
+     */
+    QVariantMap mergedConfiguration( const QVariantMap& base ) const;
+
     Calamares::ModuleSystem::InstanceKey m_instanceKey;
 };
 

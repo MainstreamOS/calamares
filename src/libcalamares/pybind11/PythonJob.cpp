@@ -398,7 +398,20 @@ Job::workingPath() const
 QVariantMap
 Job::configuration() const
 {
-    return m_d->configurationMap;
+    auto* gs = Calamares::JobQueue::instance()->globalStorage();
+    if ( !gs )
+        return m_d->configurationMap;
+
+    const auto overrides = gs->value( QStringLiteral( "moduleConfigOverrides" ) ).toMap()
+                               .value( prettyName() )
+                               .toMap();
+    if ( overrides.isEmpty() )
+        return m_d->configurationMap;
+
+    QVariantMap merged = m_d->configurationMap;
+    for ( auto it = overrides.cbegin(); it != overrides.cend(); ++it )
+        merged[ it.key() ] = it.value();
+    return merged;
 }
 
 void
