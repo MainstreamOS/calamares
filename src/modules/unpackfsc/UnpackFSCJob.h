@@ -45,6 +45,7 @@ private:
     Type m_type = Type::None;
     QString m_progressMessage;
     QString m_condition;  ///< May be empty to express condition "true"
+    QVariantMap m_configurationMap;  ///< Stored for mergedConfiguration() in exec()
 };
 
 CALAMARES_PLUGIN_FACTORY_DECLARATION( UnpackFSCFactory )

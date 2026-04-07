@@ -105,6 +105,8 @@ UnpackFSCJob::exec()
         return Calamares::JobResult::ok();
     }
 
+    setConfigurationMap( mergedConfiguration( m_configurationMap ) );
+
     cScopedAssignment messageClearer( &m_progressMessage, QString() );
     std::unique_ptr< Runner > r;
     switch ( m_type )
@@ -143,6 +145,7 @@ UnpackFSCJob::exec()
 void
 UnpackFSCJob::setConfigurationMap( const QVariantMap& map )
 {
+    m_configurationMap = map;
     m_type = Type::None;
 
     const QString source = Calamares::getString( map, "source" );
