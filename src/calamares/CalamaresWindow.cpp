@@ -35,6 +35,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QLabel>
+#include <QMouseEvent>
 #ifdef WITH_QML
 #include <QQmlContext>
 #include <QQmlEngine>
@@ -222,7 +223,7 @@ getWidgetNavigation( Calamares::DebugWindowManager*,
     {
         auto* back = new QPushButton(
             getButtonIcon( QStringLiteral( "go-previous" ) ),
-            QCoreApplication::translate( CalamaresWindow::staticMetaObject.className(), "&Back", "@button" ),
+            QCoreApplication::translate( CalamaresWindow::staticMetaObject.className(), "Back", "@button" ),
             navigation );
         back->setObjectName( "view-button-back" );
         back->setEnabled( viewManager->backEnabled() );
@@ -238,7 +239,7 @@ getWidgetNavigation( Calamares::DebugWindowManager*,
     {
         auto* next = new QPushButton(
             getButtonIcon( QStringLiteral( "go-next" ) ),
-            QCoreApplication::translate( CalamaresWindow::staticMetaObject.className(), "&Next", "@button" ),
+            QCoreApplication::translate( CalamaresWindow::staticMetaObject.className(), "Next", "@button" ),
             navigation );
         next->setObjectName( "view-button-next" );
         next->setEnabled( viewManager->nextEnabled() );
@@ -259,7 +260,7 @@ getWidgetNavigation( Calamares::DebugWindowManager*,
     {
         auto* quit = new QPushButton(
             getButtonIcon( QStringLiteral( "dialog-cancel" ) ),
-            QCoreApplication::translate( CalamaresWindow::staticMetaObject.className(), "&Cancel", "@button" ),
+            QCoreApplication::translate( CalamaresWindow::staticMetaObject.className(), "Cancel", "@button" ),
             navigation );
         quit->setObjectName( "view-button-cancel" );
         QObject::connect( quit, &QPushButton::clicked, viewManager, &Calamares::ViewManager::quit );
@@ -425,6 +426,9 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
         setWindowFlag( Qt::WindowCloseButtonHint, false );
     }
 
+    // Mainstream: frameless -- Hyprland applies rounding and shadows
+    setWindowFlag( Qt::FramelessWindowHint );
+
     // %1 is the distribution name
     CALAMARES_RETRANSLATE( const auto* branding = Calamares::Branding::instance();
                            setWindowTitle( Calamares::Settings::instance()->isSetupMode()
@@ -575,4 +579,20 @@ CalamaresWindow::closeEvent( QCloseEvent* event )
         QApplication::exit( EXIT_SUCCESS );
 #endif
     }
+}
+
+void
+CalamaresWindow::mousePressEvent( QMouseEvent* event )
+{
+    // Drag the frameless window from the nav-bar strip (top 56 px)
+    if ( event->button() == Qt::LeftButton && event->position().y() <= 56 )
+    {
+        if ( auto* h = windowHandle() )
+        {
+            h->startSystemMove();
+            event->accept();
+            return;
+        }
+    }
+    QWidget::mousePressEvent( event );
 }

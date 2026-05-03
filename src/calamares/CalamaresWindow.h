@@ -11,6 +11,7 @@
 #ifndef CALAMARESWINDOW_H
 #define CALAMARESWINDOW_H
 
+#include <QMouseEvent>
 #include <QWidget>
 
 #include <memory>
@@ -41,6 +42,7 @@ public Q_SLOTS:
 
 protected:
     virtual void closeEvent( QCloseEvent* e ) override;
+    void mousePressEvent( QMouseEvent* event ) override;
 
 private:
     Calamares::DebugWindowManager* m_debugManager = nullptr;
