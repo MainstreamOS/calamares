@@ -350,14 +350,14 @@ ViewManager::next()
                       "to undo these changes.</strong>",
                       "%1 is short product name, %2 is short product name with version" );
             QString confirm
-                = settings->isSetupMode() ? tr( "&Set Up Now", "@button" ) : tr( "&Install Now", "@button" );
+                = settings->isSetupMode() ? tr( "Set Up Now", "@button" ) : tr( "Install Now", "@button" );
 
             const auto* branding = Calamares::Branding::instance();
             int reply = questionBox( m_widget,
                                      title,
                                      question.arg( branding->shortProductName(), branding->shortVersionedName() ),
                                      confirm,
-                                     tr( "Go &Back", "@button" ) );
+                                     tr( "Go Back", "@button" ) );
             if ( reply == 1 )
             {
                 return;
@@ -405,7 +405,7 @@ ViewManager::updateButtonLabels()
 {
     const auto* const settings = Calamares::Settings::instance();
 
-    QString nextIsInstallationStep = settings->isSetupMode() ? tr( "&Set Up", "@button" ) : tr( "&Install", "@button" );
+    QString nextIsInstallationStep = settings->isSetupMode() ? tr( "Set Up", "@button" ) : tr( "Install", "@button" );
     QString quitOnCompleteTooltip = settings->isSetupMode()
         ? tr( "Setup is complete. Close the setup program.", "@tooltip" )
         : tr( "The installation is complete. Close the installer.", "@tooltip" );
@@ -421,18 +421,18 @@ ViewManager::updateButtonLabels()
     }
     else
     {
-        UPDATE_BUTTON_PROPERTY( nextLabel, tr( "&Next", "@button" ) );
+        UPDATE_BUTTON_PROPERTY( nextLabel, tr( "Next", "@button" ) );
         UPDATE_BUTTON_PROPERTY( nextIcon, "go-next" );
     }
 
     // Going back is always simple
-    UPDATE_BUTTON_PROPERTY( backLabel, tr( "&Back", "@button" ) );
+    UPDATE_BUTTON_PROPERTY( backLabel, tr( "Back", "@button" ) );
     UPDATE_BUTTON_PROPERTY( backIcon, "go-previous" );
 
     // Cancel button changes label at the end
     if ( isAtVeryEnd( m_steps, m_currentStep ) )
     {
-        UPDATE_BUTTON_PROPERTY( quitLabel, tr( "&Done", "@button" ) );
+        UPDATE_BUTTON_PROPERTY( quitLabel, tr( "Done", "@button" ) );
         UPDATE_BUTTON_PROPERTY( quitTooltip, quitOnCompleteTooltip );
         UPDATE_BUTTON_PROPERTY( quitVisible, true );
         UPDATE_BUTTON_PROPERTY( quitIcon, "dialog-ok-apply" );
@@ -451,7 +451,7 @@ ViewManager::updateButtonLabels()
         updateCancelEnabled( !settings->disableCancel()
                              && !( stepIsExecute( m_steps, m_currentStep ) && settings->disableCancelDuringExec() ) );
 
-        UPDATE_BUTTON_PROPERTY( quitLabel, tr( "&Cancel", "@button" ) );
+        UPDATE_BUTTON_PROPERTY( quitLabel, tr( "Cancel", "@button" ) );
         UPDATE_BUTTON_PROPERTY( quitTooltip, cancelBeforeInstallationTooltip );
         UPDATE_BUTTON_PROPERTY( quitIcon, "dialog-cancel" );
     }
