@@ -26,6 +26,7 @@
 #include <QCommandLineParser>
 #include <QDebug>
 #include <QDir>
+#include <QFontDatabase>
 
 #include <memory>
 
@@ -111,6 +112,21 @@ main( int argc, char* argv[] )
     QApplication::setAttribute( Qt::AA_EnableHighDpiScaling );
 #endif
     CalamaresApplication a( argc, argv );
+
+    // Mainstream: prefer the dotfiles font stack when available
+    {
+        const char* families[] = { "Google Sans Flex", "Noto Sans", "DejaVu Sans", nullptr };
+        for ( int i = 0; families[ i ]; ++i )
+        {
+            if ( QFontDatabase::hasFamily( QLatin1String( families[ i ] ) ) )
+            {
+                QFont f = a.font();
+                f.setFamily( QLatin1String( families[ i ] ) );
+                a.setFont( f );
+                break;
+            }
+        }
+    }
 
     KAboutData aboutData( "calamares",
                           "Calamares",
