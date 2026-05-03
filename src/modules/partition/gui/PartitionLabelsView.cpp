@@ -33,7 +33,7 @@ using namespace Calamares::Units;
 static const int LAYOUT_MARGIN = 4;
 static const int LABEL_PARTITION_SQUARE_MARGIN = qMax( Calamares::defaultFontHeight() - 2, 18 );
 static const int LABELS_MARGIN = LABEL_PARTITION_SQUARE_MARGIN;
-static const int CORNER_RADIUS = 2;
+static const int CORNER_RADIUS = 6;
 
 static QStringList
 buildUnknownDisklabelTexts( Device* dev )
@@ -106,7 +106,7 @@ drawPartitionSquare( QPainter* painter, const QRect& rect, const QBrush& brush )
 {
     painter->fillRect( rect.adjusted( 1, 1, -1, -1 ), brush );
     painter->setRenderHint( QPainter::Antialiasing, true );
-    painter->setPen( QPalette().shadow().color() );
+    painter->setPen( Qt::NoPen );
     painter->translate( .5, .5 );
     painter->drawRoundedRect( rect.adjusted( 0, 0, -1, -1 ), CORNER_RADIUS, CORNER_RADIUS );
     painter->translate( -.5, -.5 );
@@ -373,7 +373,7 @@ PartitionLabelsView::drawLabel( QPainter* painter,
                                 const QPoint& pos,
                                 bool selected )
 {
-    painter->setPen( Qt::black );
+    painter->setPen( palette().color( QPalette::Text ) );
     int vertOffset = 0;
     int width = 0;
     for ( const QString& textLine : text )
@@ -382,7 +382,7 @@ PartitionLabelsView::drawLabel( QPainter* painter,
         painter->drawText(
             pos.x() + LABEL_PARTITION_SQUARE_MARGIN, pos.y() + vertOffset + textSize.height() / 2, textLine );
         vertOffset += textSize.height();
-        painter->setPen( Qt::gray );
+        painter->setPen( palette().color( QPalette::PlaceholderText ) );
         width = qMax( width, textSize.width() );
     }
 
@@ -395,7 +395,7 @@ PartitionLabelsView::drawLabel( QPainter* painter,
         drawSelectionSquare( painter, partitionSquareRect.adjusted( 2, 2, -2, -2 ), color );
     }
 
-    painter->setPen( Qt::black );
+    painter->setPen( palette().color( QPalette::Text ) );
 }
 
 QModelIndex
