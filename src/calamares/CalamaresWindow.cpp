@@ -34,8 +34,10 @@
 #endif
 #include <QFile>
 #include <QFileInfo>
+#include <QFrame>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPushButton>
 #ifdef WITH_QML
 #include <QQmlContext>
 #include <QQmlEngine>
@@ -443,8 +445,6 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
     using Calamares::windowPreferredHeight;
     using Calamares::windowPreferredWidth;
 
-    using PanelSide = Calamares::Branding::PanelSide;
-
     // Needs to match what's checked in DebugWindow
     this->setObjectName( "mainApp" );
 
@@ -493,52 +493,120 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
     //       is too annoying. Instead, leave it up to ignoring-the-quit-
     //       event, which is also the ViewManager's responsibility.
 
-    QBoxLayout* mainLayout = new QHBoxLayout;
-    QBoxLayout* contentsLayout = new QVBoxLayout;
-    contentsLayout->setSpacing( 0 );
+    // ── Mainstream: M3 Settings-style layout ────────────────────────────────
+    // Mirrors dots-hyprland Quickshell settings.qml exactly:
+    //   ┌─ #mainApp (m3background, frameless, 8px outer margin) ───────────┐
+    //   │  ┌─ #titleBar ────────────────────────────────────────────────┐  │
+    //   │  │             [centered title]                       [×]    │  │
+    //   │  └────────────────────────────────────────────────────────────┘  │
+    //   │  ┌─ sidebar ─┐  ┌─ #contentFrame (m3surfaceContainerLow) ─────┐  │
+    //   │  │           │  │   centralWidget                              │  │
+    //   │  │ nav rail  │  │   navigation (Back / Next / Cancel)          │  │
+    //   │  └───────────┘  └──────────────────────────────────────────────┘  │
+    //   └─────────────────────────────────────────────────────────────────┘
+    // PanelSide values from branding.desc are intentionally ignored here —
+    // the layout is fixed by design to match the dotfiles settings app.
 
-    QWidget* sideBox
-        = flavoredWidget( branding->sidebarFlavor(),
-                          ::orientation( branding->sidebarSide() ),
-                          m_debugManager,
-                          baseWidget,
-                          ::getWidgetSidebar,
-                          ::getQmlSidebar,
-                          qBound( 100, Calamares::defaultFontHeight() * 12, w < windowPreferredWidth ? 100 : 190 ) );
+    QVBoxLayout* outerLayout = new QVBoxLayout;
+    outerLayout->setContentsMargins( 8, 8, 8, 8 );
+    outerLayout->setSpacing( 8 );
+
+    // Title bar
+    QWidget* titleBar = new QWidget( baseWidget );
+    titleBar->setObjectName( "titleBar" );
+    titleBar->setFixedHeight( 40 );
+    titleBar->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+
+    QHBoxLayout* titleBarLayout = new QHBoxLayout( titleBar );
+    titleBarLayout->setContentsMargins( 12, 0, 4, 0 );
+    titleBarLayout->setSpacing( 0 );
+
+    QLabel* titleLabel = new QLabel( titleBar );
+    titleLabel->setObjectName( "titleLabel" );
+    titleLabel->setAlignment( Qt::AlignCenter );
+    CALAMARES_RETRANSLATE_FOR(
+        titleLabel,
+        titleLabel->setText( Calamares::Settings::instance()->isSetupMode()
+                                 ? tr( "%1 Setup" ).arg( Calamares::Branding::instance()->productName() )
+                                 : tr( "%1 Installer" ).arg( Calamares::Branding::instance()->productName() ) ); );
+
+    titleBarLayout->addStretch();
+    titleBarLayout->addWidget( titleLabel, 0, Qt::AlignCenter );
+    titleBarLayout->addStretch();
+
+    if ( !Calamares::Settings::instance()->disableCancel() )
+    {
+        QPushButton* closeBtn = new QPushButton( titleBar );
+        closeBtn->setObjectName( "titleCloseButton" );
+        closeBtn->setFlat( true );
+        closeBtn->setFixedSize( 35, 35 );
+        closeBtn->setCursor( Qt::PointingHandCursor );
+        // Icon is set via QSS qproperty-icon so branding controls the asset.
+        connect( closeBtn, &QPushButton::clicked, m_viewManager, &Calamares::ViewManager::quit );
+        titleBarLayout->addWidget( closeBtn, 0, Qt::AlignRight | Qt::AlignVCenter );
+    }
+    else
+    {
+        // Reserve same right-side space so title stays optically centered.
+        titleBarLayout->addSpacing( 35 );
+    }
+
+    outerLayout->addWidget( titleBar );
+
+    // Body row: sidebar + rounded content frame
+    QHBoxLayout* bodyLayout = new QHBoxLayout;
+    bodyLayout->setContentsMargins( 0, 0, 0, 0 );
+    bodyLayout->setSpacing( 8 );
+
+    QWidget* sideBox = flavoredWidget( branding->sidebarFlavor(),
+                                       Qt::Orientation::Vertical,
+                                       m_debugManager,
+                                       baseWidget,
+                                       ::getWidgetSidebar,
+                                       ::getQmlSidebar,
+                                       qBound( 140, Calamares::defaultFontHeight() * 11, 180 ) );
+
+    QFrame* contentFrame = new QFrame( baseWidget );
+    contentFrame->setObjectName( "contentFrame" );
+    contentFrame->setFrameShape( QFrame::NoFrame );
+
+    QVBoxLayout* frameLayout = new QVBoxLayout( contentFrame );
+    frameLayout->setContentsMargins( 0, 0, 0, 0 );
+    frameLayout->setSpacing( 0 );
+    frameLayout->addWidget( m_viewManager->centralWidget() );
+
     QWidget* navigation = flavoredWidget( branding->navigationFlavor(),
-                                          ::orientation( branding->navigationSide() ),
+                                          Qt::Orientation::Horizontal,
                                           m_debugManager,
                                           baseWidget,
                                           ::getWidgetNavigation,
                                           ::getQmlNavigation,
                                           64 );
+    if ( navigation )
+    {
+        frameLayout->addWidget( navigation );
+    }
 
-    // Build up the contentsLayout (a VBox) top-to-bottom
-    // .. note that the bottom is mirrored wrt. the top
-    insertIf( contentsLayout, PanelSide::Top, sideBox, branding->sidebarSide() );
-    insertIf( contentsLayout, PanelSide::Top, navigation, branding->navigationSide() );
-    contentsLayout->addWidget( m_viewManager->centralWidget() );
-    insertIf( contentsLayout, PanelSide::Bottom, navigation, branding->navigationSide() );
-    insertIf( contentsLayout, PanelSide::Bottom, sideBox, branding->sidebarSide() );
+    if ( sideBox )
+    {
+        bodyLayout->addWidget( sideBox );
+    }
+    bodyLayout->addWidget( contentFrame );
 
-    // .. and then the mainLayout left-to-right
-    insertIf( mainLayout, PanelSide::Left, sideBox, branding->sidebarSide() );
-    insertIf( mainLayout, PanelSide::Left, navigation, branding->navigationSide() );
-    mainLayout->addLayout( contentsLayout );
-    insertIf( mainLayout, PanelSide::Right, navigation, branding->navigationSide() );
-    insertIf( mainLayout, PanelSide::Right, sideBox, branding->sidebarSide() );
+    outerLayout->addLayout( bodyLayout );
 
-    // layout->count() returns number of things in it; above we have put
-    // at **least** the central widget, which comes from the view manager,
-    // both vertically and horizontally -- so if there's a panel along
-    // either axis, the count in that axis will be > 1.
-    m_viewManager->setPanelSides(
-        ( contentsLayout->count() > 1 ? Qt::Orientations( Qt::Horizontal ) : Qt::Orientations() )
-        | ( mainLayout->count() > 1 ? Qt::Orientations( Qt::Vertical ) : Qt::Orientations() ) );
+    // The layout has panels along both axes (sidebar Vertical, navigation
+    // Horizontal inside contentFrame), so signal both sides to ViewManager.
+    m_viewManager->setPanelSides( Qt::Orientations( Qt::Horizontal ) | Qt::Orientations( Qt::Vertical ) );
 
-    Calamares::unmarginLayout( mainLayout );
-    Calamares::unmarginLayout( contentsLayout );
-    baseWidget->setLayout( mainLayout );
+    if ( baseWidget == this )
+    {
+        setLayout( outerLayout );
+    }
+    else
+    {
+        baseWidget->setLayout( outerLayout );
+    }
     setStyleSheet( Calamares::Branding::instance()->stylesheet() );
 }
 
@@ -584,8 +652,11 @@ CalamaresWindow::closeEvent( QCloseEvent* event )
 void
 CalamaresWindow::mousePressEvent( QMouseEvent* event )
 {
-    // Drag the frameless window from the nav-bar strip (top 56 px)
-    if ( event->button() == Qt::LeftButton && event->position().y() <= 56 )
+    // Drag the frameless window from the title-bar strip (8 px outer margin
+    // + 40 px title bar = 48). Child widgets that accept clicks (close button,
+    // sidebar buttons) consume their own events first, so this only fires on
+    // empty title-bar / margin space.
+    if ( event->button() == Qt::LeftButton && event->position().y() <= 48 )
     {
         if ( auto* h = windowHandle() )
         {
