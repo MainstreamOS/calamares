@@ -65,11 +65,6 @@ EncryptWidget::EncryptWidget( QWidget* parent )
     connect( m_ui->m_passphraseLineEdit, &QLineEdit::textEdited, this, &EncryptWidget::onPassphraseEdited );
     connect( m_ui->m_confirmLineEdit, &QLineEdit::textEdited, this, &EncryptWidget::onPassphraseEdited );
 
-    // Pin the row height to the styled QLineEdit's preferred size. Using
-    // height() here returns the unlaid-out geometry (~30px) before the stylesheet
-    // padding is applied, which clips placeholder text top/bottom under themes
-    // with M3-style outlined inputs. sizeHint() accounts for QSS padding/font.
-    setFixedHeight( m_ui->m_passphraseLineEdit->sizeHint().height() );
     updateState();
 
     CALAMARES_RETRANSLATE_SLOT( &EncryptWidget::retranslate );
