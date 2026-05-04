@@ -91,11 +91,19 @@ orientation( const Calamares::Branding::PanelSide s )
     return ( s == Side::Left || s == Side::Right ) ? Qt::Orientation::Vertical : Qt::Orientation::Horizontal;
 }
 
-/** @brief Get a button-sized icon. */
+/** @brief Get a button-sized icon.
+ *
+ * Prefer a branding-supplied SVG at `icons/<name>.svg` so themes can ship
+ * Material 3 nav glyphs in the right onPrimary tone. Falls back to the
+ * standard freedesktop icon-theme name (which Branding resolves via
+ * QIcon::fromTheme) when no custom asset is present.
+ */
 static inline QPixmap
 getButtonIcon( const QString& name )
 {
-    return Calamares::Branding::instance()->image( name, QSize( 22, 22 ) );
+    return Calamares::Branding::instance()->image(
+        QStringList { QStringLiteral( "icons/%1.svg" ).arg( name ), name },
+        QSize( 22, 22 ) );
 }
 
 static inline void
