@@ -10,9 +10,11 @@
 
 #include "Gui.h"
 
+#include "Branding.h"
 #include "ImageRegistry.h"
 
 #include <QBrush>
+#include <QFile>
 #include <QFont>
 #include <QFontMetrics>
 #include <QLayout>
@@ -24,6 +26,24 @@
 
 namespace Calamares
 {
+
+// Mainstream fork: when the active branding ships an icons/<name>.svg under
+// componentDirectory, prefer it over the qrc fallback. Lets a branding
+// override status pixmaps (e.g. password requirement met/not met) without
+// patching every call site or shipping a custom .qrc.
+static QPixmap
+brandedPixmap( const QString& relPath, const QSize& size )
+{
+    if ( auto* b = Branding::instance() )
+    {
+        const QString abs = b->componentDirectory() + QStringLiteral( "/" ) + relPath;
+        if ( QFile::exists( abs ) )
+        {
+            return ImageRegistry::instance()->pixmap( abs, size );
+        }
+    }
+    return QPixmap();
+}
 
 static int s_defaultFontSize = 0;
 static int s_defaultFontHeight = 0;
@@ -37,11 +57,19 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
     switch ( type )
     {
     case Yes:
-        pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/yes.svgz", size );
+        pixmap = brandedPixmap( QStringLiteral( "icons/green-password-met.svg" ), size );
+        if ( pixmap.isNull() )
+        {
+            pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/yes.svgz", size );
+        }
         break;
 
     case No:
-        pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/no.svgz", size );
+        pixmap = brandedPixmap( QStringLiteral( "icons/red-password-not-met.svg" ), size );
+        if ( pixmap.isNull() )
+        {
+            pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/no.svgz", size );
+        }
         break;
 
     case Information:
