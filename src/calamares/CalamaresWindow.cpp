@@ -35,8 +35,10 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QFrame>
+#include <QIcon>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPixmap>
 #include <QPushButton>
 #ifdef WITH_QML
 #include <QQmlContext>
@@ -511,6 +513,9 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
     outerLayout->setContentsMargins( 8, 8, 8, 8 );
     outerLayout->setSpacing( 8 );
 
+    // Sidebar column width — also used to centre the wordmark over it.
+    const int sidebarWidth = qBound( 140, Calamares::defaultFontHeight() * 11, 180 );
+
     // Title bar
     QWidget* titleBar = new QWidget( baseWidget );
     titleBar->setObjectName( "titleBar" );
@@ -518,20 +523,49 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
     titleBar->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
 
     QHBoxLayout* titleBarLayout = new QHBoxLayout( titleBar );
-    titleBarLayout->setContentsMargins( 12, 0, 4, 0 );
+    titleBarLayout->setContentsMargins( 0, 0, 4, 0 );
     titleBarLayout->setSpacing( 0 );
 
-    QLabel* titleLabel = new QLabel( titleBar );
-    titleLabel->setObjectName( "titleLabel" );
-    titleLabel->setAlignment( Qt::AlignCenter );
-    CALAMARES_RETRANSLATE_FOR(
-        titleLabel,
-        titleLabel->setText( Calamares::Settings::instance()->isSetupMode()
-                                 ? tr( "%1 Setup" ).arg( Calamares::Branding::instance()->productName() )
-                                 : tr( "%1 Installer" ).arg( Calamares::Branding::instance()->productName() ) ); );
+    // Wordmark slot — fixed-width container the same size as the sidebar
+    // column. Anything inside is horizontally centred within that column,
+    // so the brand mark lines up over the nav rail rather than the whole
+    // window. Falls back to a text title if the branding has no wordmark.
+    QWidget* wordmarkSlot = new QWidget( titleBar );
+    wordmarkSlot->setFixedWidth( sidebarWidth );
+    QHBoxLayout* wordmarkLayout = new QHBoxLayout( wordmarkSlot );
+    wordmarkLayout->setContentsMargins( 0, 0, 0, 0 );
+    wordmarkLayout->setSpacing( 0 );
+    wordmarkLayout->addStretch();
 
-    titleBarLayout->addStretch();
-    titleBarLayout->addWidget( titleLabel, 0, Qt::AlignCenter );
+    const QString wordmarkPath
+        = Calamares::Branding::instance()->componentDirectory() + QStringLiteral( "/wordmark.svg" );
+    if ( QFile::exists( wordmarkPath ) )
+    {
+        QLabel* logoLabel = new QLabel( wordmarkSlot );
+        logoLabel->setObjectName( "titleWordmark" );
+        // Render the SVG sharply at its on-screen size: 28px tall, width
+        // derived from the viewBox aspect so it never gets squashed.
+        const int logoHeight = 28;
+        QPixmap pm = QIcon( wordmarkPath ).pixmap( QSize( sidebarWidth - 24, logoHeight ) );
+        logoLabel->setPixmap( pm );
+        logoLabel->setAlignment( Qt::AlignCenter );
+        wordmarkLayout->addWidget( logoLabel, 0, Qt::AlignCenter );
+    }
+    else
+    {
+        QLabel* titleLabel = new QLabel( wordmarkSlot );
+        titleLabel->setObjectName( "titleLabel" );
+        titleLabel->setAlignment( Qt::AlignCenter );
+        CALAMARES_RETRANSLATE_FOR(
+            titleLabel,
+            titleLabel->setText( Calamares::Settings::instance()->isSetupMode()
+                                     ? tr( "%1 Setup" ).arg( Calamares::Branding::instance()->productName() )
+                                     : tr( "%1 Installer" ).arg( Calamares::Branding::instance()->productName() ) ); );
+        wordmarkLayout->addWidget( titleLabel, 0, Qt::AlignCenter );
+    }
+    wordmarkLayout->addStretch();
+
+    titleBarLayout->addWidget( wordmarkSlot );
     titleBarLayout->addStretch();
 
     if ( !Calamares::Settings::instance()->disableCancel() )
@@ -564,7 +598,7 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
                                        baseWidget,
                                        ::getWidgetSidebar,
                                        ::getQmlSidebar,
-                                       qBound( 140, Calamares::defaultFontHeight() * 11, 180 ) );
+                                       sidebarWidth );
 
     QFrame* contentFrame = new QFrame( baseWidget );
     contentFrame->setObjectName( "contentFrame" );
