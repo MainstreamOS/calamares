@@ -522,38 +522,48 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
     titleBar->setFixedHeight( 40 );
     titleBar->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
 
+    // Mirror the body row's column geometry so the wordmark zone exactly
+    // overlays the contentFrame underneath:
+    //   [sidebar slot · 8px gap · content slot]
+    // Inside the content slot the wordmark is centered, with the close
+    // button at the right edge — and a 35px reserve on the left so the
+    // wordmark stays at the geometric centre of the content slot.
     QHBoxLayout* titleBarLayout = new QHBoxLayout( titleBar );
-    titleBarLayout->setContentsMargins( 0, 0, 4, 0 );
-    titleBarLayout->setSpacing( 0 );
+    titleBarLayout->setContentsMargins( 0, 0, 0, 0 );
+    titleBarLayout->setSpacing( 8 );
 
-    // Wordmark slot — fixed-width container the same size as the sidebar
-    // column. Anything inside is horizontally centred within that column,
-    // so the brand mark lines up over the nav rail rather than the whole
-    // window. Falls back to a text title if the branding has no wordmark.
-    QWidget* wordmarkSlot = new QWidget( titleBar );
-    wordmarkSlot->setFixedWidth( sidebarWidth );
-    QHBoxLayout* wordmarkLayout = new QHBoxLayout( wordmarkSlot );
-    wordmarkLayout->setContentsMargins( 0, 0, 0, 0 );
-    wordmarkLayout->setSpacing( 0 );
-    wordmarkLayout->addStretch();
+    QWidget* titleSidebarSlot = new QWidget( titleBar );
+    titleSidebarSlot->setFixedWidth( sidebarWidth );
+    titleBarLayout->addWidget( titleSidebarSlot );
+
+    QWidget* titleContentSlot = new QWidget( titleBar );
+    QHBoxLayout* contentSlotLayout = new QHBoxLayout( titleContentSlot );
+    contentSlotLayout->setContentsMargins( 0, 0, 0, 0 );
+    contentSlotLayout->setSpacing( 0 );
+
+    const int closeBtnWidth = 35;
+    // Mirror reserve on the left so the wordmark sits at the dead centre
+    // of the content slot rather than being shifted by the close button.
+    contentSlotLayout->addSpacing( closeBtnWidth );
+    contentSlotLayout->addStretch();
 
     const QString wordmarkPath
         = Calamares::Branding::instance()->componentDirectory() + QStringLiteral( "/wordmark.svg" );
     if ( QFile::exists( wordmarkPath ) )
     {
-        QLabel* logoLabel = new QLabel( wordmarkSlot );
+        QLabel* logoLabel = new QLabel( titleContentSlot );
         logoLabel->setObjectName( "titleWordmark" );
         // Render the SVG sharply at its on-screen size: 28px tall, width
         // derived from the viewBox aspect so it never gets squashed.
         const int logoHeight = 28;
-        QPixmap pm = QIcon( wordmarkPath ).pixmap( QSize( sidebarWidth - 24, logoHeight ) );
+        QPixmap pm = QIcon( wordmarkPath ).pixmap( QSize( 320, logoHeight ) );
         logoLabel->setPixmap( pm );
         logoLabel->setAlignment( Qt::AlignCenter );
-        wordmarkLayout->addWidget( logoLabel, 0, Qt::AlignCenter );
+        contentSlotLayout->addWidget( logoLabel, 0, Qt::AlignCenter );
     }
     else
     {
-        QLabel* titleLabel = new QLabel( wordmarkSlot );
+        QLabel* titleLabel = new QLabel( titleContentSlot );
         titleLabel->setObjectName( "titleLabel" );
         titleLabel->setAlignment( Qt::AlignCenter );
         CALAMARES_RETRANSLATE_FOR(
@@ -561,29 +571,27 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
             titleLabel->setText( Calamares::Settings::instance()->isSetupMode()
                                      ? tr( "%1 Setup" ).arg( Calamares::Branding::instance()->productName() )
                                      : tr( "%1 Installer" ).arg( Calamares::Branding::instance()->productName() ) ); );
-        wordmarkLayout->addWidget( titleLabel, 0, Qt::AlignCenter );
+        contentSlotLayout->addWidget( titleLabel, 0, Qt::AlignCenter );
     }
-    wordmarkLayout->addStretch();
-
-    titleBarLayout->addWidget( wordmarkSlot );
-    titleBarLayout->addStretch();
+    contentSlotLayout->addStretch();
 
     if ( !Calamares::Settings::instance()->disableCancel() )
     {
-        QPushButton* closeBtn = new QPushButton( titleBar );
+        QPushButton* closeBtn = new QPushButton( titleContentSlot );
         closeBtn->setObjectName( "titleCloseButton" );
         closeBtn->setFlat( true );
-        closeBtn->setFixedSize( 35, 35 );
+        closeBtn->setFixedSize( closeBtnWidth, closeBtnWidth );
         closeBtn->setCursor( Qt::PointingHandCursor );
         // Icon is set via QSS qproperty-icon so branding controls the asset.
         connect( closeBtn, &QPushButton::clicked, m_viewManager, &Calamares::ViewManager::quit );
-        titleBarLayout->addWidget( closeBtn, 0, Qt::AlignRight | Qt::AlignVCenter );
+        contentSlotLayout->addWidget( closeBtn, 0, Qt::AlignRight | Qt::AlignVCenter );
     }
     else
     {
-        // Reserve same right-side space so title stays optically centered.
-        titleBarLayout->addSpacing( 35 );
+        contentSlotLayout->addSpacing( closeBtnWidth );
     }
+
+    titleBarLayout->addWidget( titleContentSlot, 1 );
 
     outerLayout->addWidget( titleBar );
 
