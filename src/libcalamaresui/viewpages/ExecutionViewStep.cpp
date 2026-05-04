@@ -97,9 +97,13 @@ ExecutionViewStep::ExecutionViewStep( QObject* parent )
 
     QToolBar* toolBar = new QToolBar;
     const auto logButtonIcon = QIcon::fromTheme( "utilities-terminal" );
+    // Prefer the branding-supplied Material 3 "terminal" SVG so the log toggle
+    // matches the rest of the M3 toolbar iconography. Falls back to the system
+    // icon-theme names if the branding doesn't ship a custom asset.
     auto toggleLogAction = toolBar->addAction(
         Branding::instance()->image(
-            { "utilities-log-viewer", "utilities-terminal", "text-x-log", "text-x-changelog", "preferences-log" },
+            { "icons/terminal.svg",
+              "utilities-log-viewer", "utilities-terminal", "text-x-log", "text-x-changelog", "preferences-log" },
             QSize( 32, 32 ) ),
         "Toggle log" );
     auto toggleLogButton = dynamic_cast< QToolButton* >( toolBar->widgetForAction( toggleLogAction ) );
