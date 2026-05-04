@@ -15,6 +15,8 @@
 #include "utils/Variant.h"
 #include "utils/Yaml.h"
 
+#include <functional>
+
 /// Recursive helper for setSelections()
 static void
 setSelections( const QStringList& selectNames, PackageTreeItem* item )
@@ -172,9 +174,32 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
         PackageTreeItem* item = static_cast< PackageTreeItem* >( index.internalPointer() );
         item->setSelected( static_cast< Qt::CheckState >( value.toInt() ) );
 
-        emit dataChanged( this->index( 0, 0 ),
-                          index.sibling( index.column(), index.row() + 1 ),
-                          QVector< int >( Qt::CheckStateRole ) );
+        // setSelected cascades to every descendant and bubbles a tri-state up
+        // the ancestors. The view only repaints regions named in dataChanged,
+        // so emit for the toggled row + every descendant + every ancestor.
+        // (Original emit had row/column swapped and missed children entirely,
+        // leaving child checkboxes stale until a hover triggered a repaint.)
+        const QVector< int > rolesChanged { Qt::CheckStateRole };
+        std::function< void( const QModelIndex& ) > emitSubtree
+            = [&]( const QModelIndex& idx )
+            {
+                if ( !idx.isValid() )
+                {
+                    return;
+                }
+                emit dataChanged( idx, idx.sibling( idx.row(), columnCount( idx ) - 1 ), rolesChanged );
+                const int rows = rowCount( idx );
+                for ( int r = 0; r < rows; ++r )
+                {
+                    emitSubtree( this->index( r, 0, idx ) );
+                }
+            };
+        emitSubtree( index.sibling( index.row(), 0 ) );
+
+        for ( QModelIndex ancestor = parent( index ); ancestor.isValid(); ancestor = parent( ancestor ) )
+        {
+            emit dataChanged( ancestor, ancestor.sibling( ancestor.row(), columnCount( ancestor ) - 1 ), rolesChanged );
+        }
     }
     return true;
 }
