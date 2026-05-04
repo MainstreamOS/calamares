@@ -133,7 +133,14 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
         break;
 
     case StatusOk:
-        pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/state-ok.svg", size );
+        // Users module's password-requirement list and other "passed" flags
+        // route through StatusOk, not Yes — share the green-password-met
+        // override so both code paths see the same branded icon.
+        pixmap = brandedPixmap( QStringLiteral( "icons/green-password-met.svg" ), size );
+        if ( pixmap.isNull() )
+        {
+            pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/state-ok.svg", size );
+        }
         break;
 
     case StatusWarning:
@@ -141,7 +148,13 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
         break;
 
     case StatusError:
-        pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/state-error.svg", size );
+        // Same reasoning as StatusOk — alias to the red-password-not-met
+        // override so users-page failure markers match the new look.
+        pixmap = brandedPixmap( QStringLiteral( "icons/red-password-not-met.svg" ), size );
+        if ( pixmap.isNull() )
+        {
+            pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/state-error.svg", size );
+        }
         break;
     }
 
