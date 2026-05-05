@@ -277,7 +277,7 @@ KeyBoardPreview::paintEvent( QPaintEvent* event )
     p.setRenderHint( QPainter::Antialiasing );
 
     p.setBrush( QColor( 0xd6, 0xd6, 0xd6 ) );
-    p.drawRect( rect() );
+    p.drawRoundedRect( QRectF( rect() ), 8, 8 );
 
     QPen pen;
     pen.setWidth( 1 );
@@ -333,7 +333,7 @@ KeyBoardPreview::paintEvent( QPaintEvent* event )
 
             rect.adjust( 5, 1, 0, 0 );
 
-            p.setPen( QColor( 0x9e, 0xde, 0x00 ) );
+            p.setPen( QColor( 0x00, 0x8d, 0xc3 ) );  // Mainstream brand blue
             p.setFont( upperFont );
             p.drawText( rect, Qt::AlignLeft | Qt::AlignTop, shift_text( k ) );
 
