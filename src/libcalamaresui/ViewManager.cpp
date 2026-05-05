@@ -27,13 +27,16 @@
 #include "widgets/ErrorDialog.h"
 #include "widgets/TranslationFix.h"
 
+#include <QAbstractButton>
 #include <QApplication>
 #include <QBoxLayout>
 #include <QClipboard>
 #include <QDialogButtonBox>
 #include <QFile>
+#include <QIcon>
 #include <QMessageBox>
 #include <QMetaObject>
+#include <QPixmap>
 
 #define UPDATE_BUTTON_PROPERTY( name, value ) \
     do \
@@ -549,6 +552,34 @@ ViewManager::confirmCancelInstallation()
     QMessageBox mb( QMessageBox::Question, title, question, QMessageBox::Yes | QMessageBox::No, m_widget );
     mb.setDefaultButton( QMessageBox::No );
     Calamares::fixButtonLabels( &mb );
+    // Mainstream fork — Qt's platform theme hands the Yes/No buttons stock
+    // SP_DialogYesButton / SP_DialogNoButton icons, which on a freedesktop
+    // theme often render too pale against the m3primary pill (#cbc4cb) the
+    // QSS gives every QPushButton. Pull the branding's dark-tone glyphs
+    // (m3onPrimary fill) so the dialog-cancel / dialog-ok-apply marks here
+    // match the same dark-on-light treatment used elsewhere in the shell.
+    if ( auto* yesBtn = mb.button( QMessageBox::Yes ) )
+    {
+        const QPixmap pm = Calamares::Branding::instance()->image(
+            QStringList { QStringLiteral( "icons/dialog-ok-apply.svg" ),
+                          QStringLiteral( "dialog-ok-apply" ) },
+            QSize( 22, 22 ) );
+        if ( !pm.isNull() )
+        {
+            yesBtn->setIcon( QIcon( pm ) );
+        }
+    }
+    if ( auto* noBtn = mb.button( QMessageBox::No ) )
+    {
+        const QPixmap pm = Calamares::Branding::instance()->image(
+            QStringList { QStringLiteral( "icons/dialog-cancel.svg" ),
+                          QStringLiteral( "dialog-cancel" ) },
+            QSize( 22, 22 ) );
+        if ( !pm.isNull() )
+        {
+            noBtn->setIcon( QIcon( pm ) );
+        }
+    }
     int response = mb.exec();
     return ( response == QMessageBox::Yes ) ? Confirmation::CancelInstallation : Confirmation::Continue;
 }
