@@ -217,9 +217,15 @@ void
 LocaleTwoColumnDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
     QStyledItemDelegate::paint( painter, option, index );
+    // Inset the right-aligned English label by the same horizontal padding the
+    // QSS gives to QComboBox QAbstractItemView::item — 4 px margin + 12 px
+    // padding = 16 px on each side. Without this the label is drawn at
+    // option.rect's right edge and overflows past the rounded item highlight.
+    constexpr int kItemHorizontalInset = 16;
+    const QRect textRect = option.rect.adjusted( kItemHorizontalInset, 0, -kItemHorizontalInset, 0 );
     option.widget->style()->drawItemText(
         painter,
-        option.rect,
+        textRect,
         Qt::AlignRight | Qt::AlignVCenter,
         option.palette,
         false,
