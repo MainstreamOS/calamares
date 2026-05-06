@@ -149,7 +149,7 @@ Page
                     sourceComponent: (config.languageIcon != "")  ? icon : image
                 }
 
-                ComboBox {
+                RoundedComboBox {
                     id: languages
                     anchors.left: imLoader.right
                     width: languageBar.width /1.1

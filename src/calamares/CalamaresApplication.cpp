@@ -30,10 +30,21 @@
 #include "utils/Retranslator.h"
 #include "viewpages/ViewStep.h"
 
+#include <QAbstractItemView>
+#include <QChildEvent>
+#include <QComboBox>
 #include <QDir>
+#include <QEvent>
 #include <QFileInfo>
+#include <QFrame>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPointer>
+#include <QPolygon>
+#include <QRegion>
 #include <QScreen>
 #include <QTimer>
+#include <QWidget>
 
 /// @brief Convenience for "are the settings in debug mode"
 static bool
@@ -41,6 +52,191 @@ isDebug()
 {
     return Calamares::Settings::instance() && Calamares::Settings::instance()->debugMode();
 }
+
+namespace
+{
+
+constexpr auto* PopupFrameProperty = "calamaresRoundedComboPopup";
+constexpr auto* PopupMovingProperty = "calamaresRoundedComboPopupMoving";
+constexpr int PopupRadius = 16;
+constexpr int PopupPadding = 8;
+constexpr int PopupGap = 4;
+const QColor PopupBackground( 0x2b, 0x2a, 0x2a );
+
+}  // namespace
+
+class ComboBoxPopupStyler : public QObject
+{
+public:
+    explicit ComboBoxPopupStyler( QObject* parent )
+        : QObject( parent )
+    {
+    }
+
+protected:
+    bool eventFilter( QObject* obj, QEvent* ev ) override
+    {
+        if ( ev->type() == QEvent::ChildAdded )
+        {
+            if ( auto* combo = qobject_cast< QComboBox* >( obj ) )
+            {
+                QObject* added = static_cast< QChildEvent* >( ev )->child();
+                if ( added && added->isWidgetType() )
+                {
+                    // QEvent::ChildAdded fires from the QObject base
+                    // constructor, *before* QComboBoxPrivateContainer's own
+                    // constructor finishes. At this point metaObject() reports
+                    // the base class ("QWidget") and qobject_cast<QFrame*>
+                    // returns null — so casting here would always miss the
+                    // popup container. Defer one event-loop tick; by then the
+                    // subclass is fully constructed and the cast succeeds.
+                    QPointer< QObject > safeAdded( added );
+                    QPointer< QComboBox > safeCombo( combo );
+                    QTimer::singleShot( 0, this, [ this, safeAdded, safeCombo ]() {
+                        if ( !safeAdded || !safeCombo )
+                        {
+                            return;
+                        }
+                        auto* frame = qobject_cast< QFrame* >( safeAdded.data() );
+                        if ( frame && !frame->property( PopupFrameProperty ).toBool() )
+                        {
+                            setupPopupFrame( safeCombo.data(), frame );
+                        }
+                    } );
+                }
+            }
+
+            return QObject::eventFilter( obj, ev );
+        }
+
+        auto* frame = qobject_cast< QFrame* >( obj );
+        if ( !frame || !frame->property( PopupFrameProperty ).toBool() )
+        {
+            return QObject::eventFilter( obj, ev );
+        }
+
+        if ( ev->type() == QEvent::Show )
+        {
+            if ( auto* combo = qobject_cast< QComboBox* >( frame->parent() ) )
+            {
+                positionPopup( combo, frame );
+            }
+            applyRoundedMask( frame );
+            return QObject::eventFilter( obj, ev );
+        }
+
+        if ( ev->type() == QEvent::Resize )
+        {
+            applyRoundedMask( frame );
+            return QObject::eventFilter( obj, ev );
+        }
+
+        if ( ev->type() == QEvent::Paint )
+        {
+            // WA_TranslucentBackground (set in setupPopupFrame) initialises
+            // the backing store to (0,0,0,0); paintEvent only needs to draw
+            // the rounded surface. Pixels outside the path stay transparent,
+            // and on every compositor we target the desktop shows through.
+            QPainter p( frame );
+            p.setRenderHint( QPainter::Antialiasing, true );
+            p.setPen( Qt::NoPen );
+            p.setBrush( PopupBackground );
+            QPainterPath path;
+            path.addRoundedRect( QRectF( frame->rect() ), PopupRadius, PopupRadius );
+            p.drawPath( path );
+            return true;
+        }
+
+        return QObject::eventFilter( obj, ev );
+    }
+
+private:
+    void setupPopupFrame( QComboBox* combo, QFrame* frame )
+    {
+        frame->setProperty( PopupFrameProperty, true );
+        frame->setAttribute( Qt::WA_TranslucentBackground, true );
+        frame->setFrameShape( QFrame::NoFrame );
+        frame->installEventFilter( this );
+
+        stylePopupView( combo );
+        applyRoundedMask( frame );
+    }
+
+    void stylePopupView( QComboBox* combo )
+    {
+        auto* view = combo ? combo->view() : nullptr;
+        if ( !view )
+        {
+            return;
+        }
+
+        view->setAttribute( Qt::WA_TranslucentBackground, true );
+        view->setFrameShape( QFrame::NoFrame );
+        view->viewport()->setAttribute( Qt::WA_TranslucentBackground, true );
+        view->setContentsMargins( PopupPadding, PopupPadding, PopupPadding, PopupPadding );
+
+        // Force the popup's icon size to match the combo button's. Without
+        // this, modules whose model returns large native pixmaps (e.g. the
+        // partition module's "Select storage device" combo, whose model
+        // ships ~48px disk icons) render the popup rows at native pixmap
+        // size while the combo button renders them at QComboBox::iconSize.
+        // The mismatch made the storage-device dropdown rows several times
+        // taller than the rows of any other combo. Snapping the view's
+        // iconSize to the combo's keeps both ends visually consistent.
+        const QSize comboIconSize = combo->iconSize();
+        if ( comboIconSize.isValid() && !comboIconSize.isEmpty() )
+        {
+            view->setIconSize( comboIconSize );
+        }
+    }
+
+    void positionPopup( QComboBox* combo, QWidget* popup )
+    {
+        if ( popup->property( PopupMovingProperty ).toBool() )
+        {
+            return;
+        }
+
+        popup->setProperty( PopupMovingProperty, true );
+        const QPoint anchor = combo->mapToGlobal( QPoint( 0, combo->height() + PopupGap ) );
+        popup->setGeometry( anchor.x(), anchor.y(), combo->width(), popup->height() );
+        popup->setProperty( PopupMovingProperty, false );
+    }
+
+    // setMask() defines the popup window's bounding shape. On compositors
+    // that don't honor WA_TranslucentBackground at all this is the only
+    // thing that prevents the rectangular bounding box from showing as a
+    // dark slab behind the painted rounded surface.
+    //
+    // On compositors that *do* honor translucency (Hyprland included),
+    // the visible boundary comes from the antialiased rounded path painted
+    // in paintEvent — and we want the mask to be *just slightly larger*
+    // than that path so the polygon mask edge never cuts into the AA
+    // curve. Using exactly PopupRadius made the polygon segments sit
+    // right on the curve, perceptible as squared-off lighter tips at
+    // each corner. Inflating by a couple of pixels pushes those segments
+    // outside the visible AA edge and lets the smooth painted curve
+    // define the corner instead.
+    void applyRoundedMask( QWidget* frame )
+    {
+        const QRect r = frame->rect();
+        if ( r.isEmpty() )
+        {
+            return;
+        }
+
+        constexpr qreal MaskOvershoot = 2.0;
+        QPainterPath path;
+        path.addRoundedRect( QRectF( r ).adjusted( -MaskOvershoot, -MaskOvershoot, MaskOvershoot, MaskOvershoot ),
+                             PopupRadius + MaskOvershoot,
+                             PopupRadius + MaskOvershoot );
+        const QRegion region( path.toFillPolygon().toPolygon() );
+        if ( frame->mask() != region )
+        {
+            frame->setMask( region );
+        }
+    }
+};
 
 CalamaresApplication::CalamaresApplication( int& argc, char* argv[] )
     : QApplication( argc, argv )
@@ -59,6 +255,10 @@ CalamaresApplication::CalamaresApplication( int& argc, char* argv[] )
 
     QFont f = font();
     Calamares::setDefaultFontSize( f.pointSize() );
+
+    // QComboBox popup styling — installed app-wide so every combo in any
+    // module / dialog picks up the dots-hyprland-style frameless surface.
+    installEventFilter( new ComboBoxPopupStyler( this ) );
 }
 
 void

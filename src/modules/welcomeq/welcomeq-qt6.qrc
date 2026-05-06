@@ -1,6 +1,7 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource>
   <file alias="welcomeq.qml">welcomeq-qt6.qml</file>
+  <file alias="RoundedComboBox.qml">RoundedComboBox.qml</file>
   <file alias="release_notes.qml">release_notes.qml</file>
   <file alias="Recommended.qml">Recommended.qml</file>
   <file alias="Requirements.qml">Requirements.qml</file>

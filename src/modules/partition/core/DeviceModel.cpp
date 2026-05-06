@@ -94,10 +94,17 @@ DeviceModel::data( const QModelIndex& index, int role ) const
             }
         }
     case Qt::DecorationRole:
-        return Calamares::defaultPixmap(
+        // Return as QIcon, not raw QPixmap. QStyledItemDelegate renders a
+        // QPixmap at its native size and ignores the view's iconSize, which
+        // made the storage-device combo's dropdown rows render at the
+        // pixmap's full 2*defaultIconSize while the combo button rendered
+        // them scaled down — a visible mismatch in the welcome/partition
+        // pages. Wrapping in QIcon lets both the button and the popup
+        // delegate honor iconSize, keeping the two ends visually consistent.
+        return QIcon( Calamares::defaultPixmap(
             Calamares::PartitionDisk,
             Calamares::Original,
-            QSize( Calamares::defaultIconSize().width() * 2, Calamares::defaultIconSize().height() * 2 ) );
+            QSize( Calamares::defaultIconSize().width() * 2, Calamares::defaultIconSize().height() * 2 ) ) );
     default:
         return QVariant();
     }
