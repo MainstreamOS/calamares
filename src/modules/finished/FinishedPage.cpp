@@ -91,7 +91,10 @@ FinishedPage::retranslate()
             ui->mainText->setText( tr( "<h1>All done.</h1><br/>"
                                        "%1 has been installed on your computer.<br/>"
                                        "You may now restart into your new system, or continue "
-                                       "using the %2 Live environment.",
+                                       "using the %2 Live environment.<br/><br/>"
+                                       "<b>Before clicking Done, please remove your USB drive.</b><br/>"
+                                       "If you leave it plugged in, your computer might boot back "
+                                       "into this installer instead of your new system.",
                                        "@info" )
                                        .arg( branding->versionedName(), branding->productName() ) );
             ui->restartCheckBox->setToolTip( tr( "<html><head/><body>"
