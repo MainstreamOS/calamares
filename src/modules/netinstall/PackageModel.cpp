@@ -242,6 +242,28 @@ PackageModel::setSelections( const QStringList& selectNames )
     }
 }
 
+// Recursively unchecks every item in the tree. Helper for the public
+// PackageModel::clearSelections() below; kept as a free function to
+// mirror the file-local ::setSelections() helper above.
+static void
+clearSelections( PackageTreeItem* item )
+{
+    for ( int i = 0; i < item->childCount(); i++ )
+    {
+        clearSelections( item->child( i ) );
+    }
+    item->setSelected( Qt::CheckState::Unchecked );
+}
+
+void
+PackageModel::clearSelections()
+{
+    if ( m_rootItem )
+    {
+        ::clearSelections( m_rootItem );
+    }
+}
+
 PackageTreeItem::List
 PackageModel::getPackages() const
 {

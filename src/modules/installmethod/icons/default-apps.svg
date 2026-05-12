@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Default Apps — 3x3 grid of accent-tinted rounded squares. Reads as
+  "all the apps come together as one curated bundle". Drawn directly
+  in the Mainstream M3 dark palette so it renders correctly inside
+  the M3 dark card without any runtime recolor.
+
+  Palette:
+    #1f1e1e — outer tile background, slightly darker than the card's
+              surfaceContainerHigh so the icon reads as a nested tile
+    #18A0BE — Mainstream brand accent (matches the selected card border)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1f1e1e"/>
+  <rect x="36"  y="36"  width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="104" y="36"  width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="172" y="36"  width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="36"  y="104" width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="104" y="104" width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="172" y="104" width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="36"  y="172" width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="104" y="172" width="48" height="48" rx="12" fill="#18A0BE"/>
+  <rect x="172" y="172" width="48" height="48" rx="12" fill="#18A0BE"/>
+</svg>

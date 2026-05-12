@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Developer — angle brackets with a slash between, the universal
+  </> shorthand for "code". Drawn in the Mainstream palette so it
+  sits naturally next to the other choice tiles.
+
+  Palette:
+    #1f1e1e — outer tile background
+    #18A0BE — Mainstream brand accent (strokes)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1f1e1e"/>
+
+  <!-- Left bracket  <  -->
+  <path d="M86 80 L40 128 L86 176"
+        fill="none" stroke="#18A0BE" stroke-width="14"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Right bracket  >  -->
+  <path d="M170 80 L216 128 L170 176"
+        fill="none" stroke="#18A0BE" stroke-width="14"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Diagonal slash  /  through the middle -->
+  <line x1="150" y1="60" x2="106" y2="196"
+        stroke="#18A0BE" stroke-width="14" stroke-linecap="round"/>
+</svg>

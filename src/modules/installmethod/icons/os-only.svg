@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  OS Only — a minimal terminal window with a $ prompt + cursor and a
+  pair of muted tildes underneath. Reads as "just the bare shell".
+
+  Palette:
+    #1f1e1e — outer tile background
+    #141313 — Mainstream m3background, the terminal inner panel
+              (darker than the tile so the window reads as inset)
+    #49464a — Mainstream m3outlineVariant, the terminal window border
+    #18A0BE — Mainstream brand accent, the prompt dots, $ glyph,
+              and cursor block
+    #7b777b — neutral muted gray for the trailing ~ rows
+
+  Note: QSvgRenderer doesn't animate <animate> elements; the cursor
+  renders statically at its base 0.8 opacity rather than blinking.
+  Left in the SVG anyway so the file works in browsers / preview tools.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1f1e1e"/>
+
+  <!-- Terminal window frame -->
+  <rect x="32" y="44" width="192" height="168" rx="16"
+        fill="#141313" stroke="#49464a" stroke-width="2"/>
+
+  <!-- Title-bar dots, fading toward the right -->
+  <circle cx="56" cy="64" r="5" fill="#18A0BE" opacity="0.6"/>
+  <circle cx="74" cy="64" r="5" fill="#18A0BE" opacity="0.4"/>
+  <circle cx="92" cy="64" r="5" fill="#18A0BE" opacity="0.25"/>
+
+  <!-- Prompt: $ glyph + blinking cursor block -->
+  <text x="52" y="108" font-family="monospace" font-size="20" font-weight="bold"
+        fill="#18A0BE">$</text>
+  <rect x="72" y="94" width="12" height="20" rx="2" fill="#18A0BE" opacity="0.8">
+    <animate attributeName="opacity" values="0.8;0;0.8" dur="1.2s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Empty tilde lines -->
+  <text x="52" y="140" font-family="monospace" font-size="16" fill="#7b777b">~</text>
+  <text x="52" y="168" font-family="monospace" font-size="16" fill="#7b777b">~</text>
+</svg>

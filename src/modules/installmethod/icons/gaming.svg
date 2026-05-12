@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Gaming — a stylized controller silhouette with D-pad on the left
+  and four face buttons on the right. Tile + accent in Mainstream
+  palette, button + D-pad cut-outs are the inner background color
+  so they read as inset.
+
+  Palette:
+    #1f1e1e — outer tile background
+    #18A0BE — Mainstream brand accent (controller body)
+    #141313 — Mainstream m3background (D-pad + button cutouts)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1f1e1e"/>
+
+  <!-- Controller body — rounded oblong with grip flares -->
+  <path d="M72 92
+           Q 40 92, 40 124
+           L 40 172
+           Q 40 204, 76 204
+           Q 96 204, 104 192
+           L 112 180
+           L 144 180
+           L 152 192
+           Q 160 204, 180 204
+           Q 216 204, 216 172
+           L 216 124
+           Q 216 92, 184 92
+           Z"
+        fill="#18A0BE"/>
+
+  <!-- D-pad on the left (cross) -->
+  <rect x="68"  y="136" width="34" height="10" rx="2" fill="#141313"/>
+  <rect x="80"  y="124" width="10" height="34" rx="2" fill="#141313"/>
+
+  <!-- Four face buttons on the right (diamond layout) -->
+  <circle cx="176" cy="124" r="7" fill="#141313"/>
+  <circle cx="192" cy="141" r="7" fill="#141313"/>
+  <circle cx="160" cy="141" r="7" fill="#141313"/>
+  <circle cx="176" cy="158" r="7" fill="#141313"/>
+</svg>

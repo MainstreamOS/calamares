@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Customize Your Apps — three horizontal sliders at different knob
+  positions (70%, 40%, 90%). Reads as "you tune the dials".
+
+  Palette:
+    #1f1e1e — outer tile background
+    #49464a — Mainstream m3outlineVariant, the unfilled slider track
+    #18A0BE — Mainstream brand accent, the filled portion + knob
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <rect width="256" height="256" rx="32" fill="#1f1e1e"/>
+
+  <!-- Slider 1 — knob at 70% -->
+  <rect x="40" y="62" width="176" height="8" rx="4" fill="#49464a"/>
+  <rect x="40" y="62" width="123" height="8" rx="4" fill="#18A0BE"/>
+  <circle cx="163" cy="66" r="14" fill="#18A0BE"/>
+
+  <!-- Slider 2 — knob at 40% -->
+  <rect x="40" y="124" width="176" height="8" rx="4" fill="#49464a"/>
+  <rect x="40" y="124" width="70" height="8" rx="4" fill="#18A0BE"/>
+  <circle cx="110" cy="128" r="14" fill="#18A0BE"/>
+
+  <!-- Slider 3 — knob at 90% -->
+  <rect x="40" y="186" width="176" height="8" rx="4" fill="#49464a"/>
+  <rect x="40" y="186" width="158" height="8" rx="4" fill="#18A0BE"/>
+  <circle cx="198" cy="190" r="14" fill="#18A0BE"/>
+</svg>

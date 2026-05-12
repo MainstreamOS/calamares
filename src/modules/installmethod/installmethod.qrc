@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="installmethod">
+        <file>icons/default-apps.svg</file>
+        <file>icons/customize.svg</file>
+        <file>icons/developer.svg</file>
+        <file>icons/gaming.svg</file>
+        <file>icons/os-only.svg</file>
+    </qresource>
+</RCC>

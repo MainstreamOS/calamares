@@ -64,6 +64,17 @@ public:
      */
     void setSelections( const QStringList& selectNames );
 
+    /** @brief Recursively unchecks every group and package in the tree.
+     *
+     * Use this when an upstream module (e.g. installmethod's "OS Only"
+     * choice) has decided that nothing from netinstall should be
+     * installed. Pairs naturally with `setSelections()` when the
+     * upstream module wants to choose an exact set of groups to check
+     * rather than additively layering selections on top of the model's
+     * defaults.
+     */
+    void clearSelections();
+
     PackageTreeItem::List getPackages() const;
     PackageTreeItem::List getItemPackages( PackageTreeItem* item ) const;
 
