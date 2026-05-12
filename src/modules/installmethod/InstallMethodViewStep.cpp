@@ -36,36 +36,6 @@ InstallMethodViewStep::prettyName() const
     return tr( "Get Started", "@title" );
 }
 
-QString
-InstallMethodViewStep::prettyStatus() const
-{
-    // Surface the user's pick on the Summary page so they can see at a
-    // glance whether the installer is going to bring along the curated
-    // app set, send them through netinstall, install a themed bundle,
-    // or strip it back to the bare OS.
-    if ( !m_config )
-    {
-        return QString();
-    }
-    switch ( m_config->choice() )
-    {
-    case InstallMethod::Choice::Default:
-        return tr( "Default Apps — install the curated %1 group automatically." )
-            .arg( m_config->defaultAppsGroupName() );
-    case InstallMethod::Choice::Custom:
-        return tr( "Customize — you will pick packages on the next page." );
-    case InstallMethod::Choice::Developer:
-        return tr( "Developer — install the %1 group automatically." )
-            .arg( m_config->developerGroupName() );
-    case InstallMethod::Choice::Gaming:
-        return tr( "Gaming — install the %1 group automatically." )
-            .arg( m_config->gamingGroupName() );
-    case InstallMethod::Choice::OsOnly:
-        return tr( "OS Only — no optional apps will be installed." );
-    }
-    return QString();
-}
-
 QWidget*
 InstallMethodViewStep::widget()
 {
