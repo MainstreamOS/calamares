@@ -174,6 +174,20 @@ Config::finalizeGlobalStorage( const Calamares::ModuleSystem::InstanceKey& key )
         }
     }
 
+    // Diagnostic: leaving this step with zero selections almost always
+    // means the upstream install will be a no-op even though the user
+    // expected packages. Log loudly when it happens — the packages
+    // module's own warning then has matching context to correlate
+    // against.
+    cDebug() << "netinstall finalizeGlobalStorage" << key.toString()
+             << "→ install" << installPackages.length()
+             << "try_install" << tryInstallPackages.length();
+    if ( installPackages.isEmpty() && tryInstallPackages.isEmpty() )
+    {
+        cWarning() << "netinstall: nothing selected when finalizing GlobalStorage for" << key.toString()
+                   << "— packages module will run as a no-op.";
+    }
+
     Calamares::Packages::setGSPackageAdditions(
         Calamares::JobQueue::instance()->globalStorage(), key, installPackages, tryInstallPackages );
 }
