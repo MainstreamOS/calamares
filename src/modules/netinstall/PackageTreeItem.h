@@ -53,6 +53,19 @@ public:
     QString name() const { return m_name; }
     QString packageName() const { return m_packageName; }
 
+    /** @brief Friendly label for this package, distinct from packageName().
+     *
+     * The netinstall YAML may set `display: "Spotify"` next to
+     * `name: spotify` so the UI checkbox and the per-install status
+     * message show a readable label instead of the install identifier
+     * (which for Flatpak refs is a reverse-DNS string like
+     * `com.spotify.Client`).
+     *
+     * Empty when no `display:` was set. data() falls back to
+     * packageName() in that case, preserving upstream behaviour.
+     */
+    QString displayName() const { return m_displayName; }
+
     QString description() const { return m_description; }
     QString preScript() const { return m_preScript; }
     QString postScript() const { return m_postScript; }
@@ -161,6 +174,7 @@ private:
     // An entry can be a package, or a group.
     QString m_name;
     QString m_packageName;
+    QString m_displayName;  // Optional friendly label; empty when unset.
     Qt::CheckState m_selected = Qt::Unchecked;
 
     // These are only useful for groups

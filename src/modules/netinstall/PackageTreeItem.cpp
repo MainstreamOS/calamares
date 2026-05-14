@@ -56,6 +56,10 @@ PackageTreeItem::PackageTreeItem( const QString& packageName, PackageTreeItem* p
 PackageTreeItem::PackageTreeItem( const QVariantMap& groupData, PackageTag&& parent )
     : m_parentItem( parent.parent )
     , m_packageName( Calamares::getString( groupData, "name" ) )
+    // `display` is optional. If set, data() returns it instead of packageName
+    // and toOperation() includes it so the install loop can use it in its
+    // per-package status message.
+    , m_displayName( Calamares::getString( groupData, "display" ) )
     , m_selected( parentCheckState( parent.parent ) )
     , m_description( Calamares::getString( groupData, "description" ) )
     , m_isGroup( false )
@@ -129,8 +133,17 @@ PackageTreeItem::data( int column ) const
     switch ( column )
     {
     case 0:
-        // packages have a packagename, groups don't
-        return QVariant( isPackage() ? packageName() : name() );
+        // packages have a packagename, groups don't. When the YAML set
+        // a `display:` for a package, prefer that — the install identifier
+        // (m_packageName) may be a Flatpak reverse-DNS string like
+        // `com.spotify.Client` which is unfriendly to look at in a
+        // checkbox list. Groups keep using their `name:` field
+        // unchanged.
+        if ( isPackage() )
+        {
+            return QVariant( m_displayName.isEmpty() ? packageName() : m_displayName );
+        }
+        return QVariant( name() );
     case 1:
         // packages often have a blank description
         return QVariant( description() );
@@ -273,14 +286,27 @@ PackageTreeItem::type() const
 QVariant
 PackageTreeItem::toOperation() const
 {
-    // If it's a package with a pre- or post-script, replace
-    // with the more complicated datastructure.
-    if ( !m_preScript.isEmpty() || !m_postScript.isEmpty() )
+    // If it's a package with a pre- or post-script, OR has a separate
+    // friendly display name set via YAML `display:`, return the dict
+    // shape so the packages module can route both pieces of metadata
+    // through. Plain-string packages (just a name) stay as a bare
+    // string for upstream-compatibility with backends that ignore the
+    // dict path.
+    const bool hasScripts = !m_preScript.isEmpty() || !m_postScript.isEmpty();
+    const bool hasDisplay = !m_displayName.isEmpty();
+    if ( hasScripts || hasDisplay )
     {
         QMap< QString, QVariant > sdetails;
-        sdetails.insert( "pre-script", m_preScript );
         sdetails.insert( "package", m_packageName );
-        sdetails.insert( "post-script", m_postScript );
+        if ( hasScripts )
+        {
+            sdetails.insert( "pre-script", m_preScript );
+            sdetails.insert( "post-script", m_postScript );
+        }
+        if ( hasDisplay )
+        {
+            sdetails.insert( "display", m_displayName );
+        }
         return sdetails;
     }
     else
