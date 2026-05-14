@@ -404,7 +404,49 @@ Job::configuration() const
 void
 Job::emitProgress( double progressValue )
 {
-    // TODO: update prettyname
+    // Refresh the pretty status text from Python every time the job
+    // reports progress. Without this, m_d->description is captured
+    // once at job start (from pretty_name) and stays frozen; per-step
+    // status updates that Python modules write into a global like
+    // `custom_status_message` and surface via pretty_status_message()
+    // never reach the UI's secondary label, no matter how often the
+    // Python code calls libcalamares.job.setprogress().
+    //
+    // We're called from JobProxy::setprogress, which runs inside the
+    // Python interpreter, which means the GIL is already held by this
+    // thread — no need for py::gil_scoped_acquire. The import lookup
+    // is cheap because __main__ is already in sys.modules by the time
+    // setprogress fires.
+    try
+    {
+        auto scope = py::module_::import( "__main__" ).attr( "__dict__" );
+        static constexpr char key_status[] = "pretty_status_message";
+        if ( scope.contains( key_status ) )
+        {
+            const py::object func = scope[ key_status ];
+            try
+            {
+                const auto s = func().cast< std::string >();
+                const QString fresh = QString::fromUtf8( s.c_str() );
+                if ( !fresh.isEmpty() )
+                {
+                    m_d->description = fresh;
+                }
+            }
+            catch ( const py::cast_error& )
+            {
+                // pretty_status_message() returned a non-string — ignore.
+            }
+            catch ( const py::error_already_set& )
+            {
+                // pretty_status_message() raised — ignore, keep stale text.
+            }
+        }
+    }
+    catch ( const py::error_already_set& )
+    {
+        // Importing __main__ failed (shouldn't, but defensive).
+    }
     emit progress( progressValue );
 }
 
