@@ -211,22 +211,42 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
         // looking at the same package. finalizeGlobalStorage also
         // dedupes by packageName so we never queue the same install
         // twice — this is purely for visual consistency.
-        if ( item->isPackage() )
+        //
+        // Handle both kinds of clicks:
+        //   * Package toggled directly → item is the package; mirror
+        //     its new state to every duplicate.
+        //   * Group toggled → setSelected() cascaded the new state to
+        //     every package descendant. Walk that subtree and mirror
+        //     each package's new state to its duplicates so the cascade
+        //     reaches duplicates in OTHER groups too. Without this, the
+        //     package in the toggled group changes state but the same
+        //     package in "Included Extras" (or wherever else it lives)
+        //     stays at its old state and the two drift out of sync.
+        auto syncDuplicatesFor = [ this, &rolesChanged ]( PackageTreeItem* leaf )
         {
-            const QString name = item->packageName();
+            if ( !leaf || !leaf->isPackage() )
+            {
+                return;
+            }
+            const QString name = leaf->packageName();
+            if ( name.isEmpty() )
+            {
+                return;
+            }
+            const Qt::CheckState state = leaf->isSelected();
             PackageTreeItem::List duplicates;
             collectPackagesByName( m_rootItem, name, duplicates );
             for ( auto* dup : duplicates )
             {
-                if ( dup == item || dup->isSelected() == newState )
+                if ( dup == leaf || dup->isSelected() == state )
                 {
                     continue;
                 }
-                dup->setSelected( newState );
+                dup->setSelected( state );
                 // Repaint the duplicate's row and every ancestor — the
-                // setSelected call above already recomputed the
-                // tri-state on each ancestor, but the view doesn't know
-                // until we emit dataChanged for those indices.
+                // setSelected call above already recomputed the tri-state
+                // on each ancestor, but the view doesn't know until we
+                // emit dataChanged for those indices.
                 const QModelIndex dupIdx = indexFor( dup );
                 if ( !dupIdx.isValid() )
                 {
@@ -242,7 +262,25 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
                                       rolesChanged );
                 }
             }
-        }
+        };
+
+        std::function< void( PackageTreeItem* ) > walkSubtree
+            = [ & ]( PackageTreeItem* node )
+            {
+                if ( !node )
+                {
+                    return;
+                }
+                if ( node->isPackage() )
+                {
+                    syncDuplicatesFor( node );
+                }
+                for ( int i = 0; i < node->childCount(); ++i )
+                {
+                    walkSubtree( node->child( i ) );
+                }
+            };
+        walkSubtree( item );
     }
     return true;
 }
