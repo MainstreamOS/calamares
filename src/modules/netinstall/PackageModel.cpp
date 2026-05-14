@@ -15,6 +15,8 @@
 #include "utils/Variant.h"
 #include "utils/Yaml.h"
 
+#include <QSet>
+
 #include <functional>
 
 /// Recursive helper for setSelections()
@@ -296,6 +298,76 @@ PackageModel::indexFor( PackageTreeItem* item ) const
     return QModelIndex();
 }
 
+void
+PackageModel::syncDuplicatePackageSelections()
+{
+    if ( !m_rootItem )
+    {
+        return;
+    }
+
+    // Pass 1: collect packageName() of every Checked leaf. Each group
+    // inherits its `selected:` field from the YAML, but the child
+    // packages then inherit from the parent's state — so a package in
+    // a group with `selected: true` lands here, while the same package
+    // in a different group with `selected: false` does not. We want
+    // both to end up Checked.
+    QSet< QString > checkedNames;
+    std::function< void( PackageTreeItem* ) > collect = [ & ]( PackageTreeItem* node )
+    {
+        for ( int i = 0; i < node->childCount(); ++i )
+        {
+            auto* child = node->child( i );
+            if ( !child )
+            {
+                continue;
+            }
+            if ( child->isPackage() && child->isSelected() == Qt::Checked
+                 && !child->packageName().isEmpty() )
+            {
+                checkedNames.insert( child->packageName() );
+            }
+            if ( child->childCount() > 0 )
+            {
+                collect( child );
+            }
+        }
+    };
+    collect( m_rootItem );
+
+    if ( checkedNames.isEmpty() )
+    {
+        return;
+    }
+
+    // Pass 2: promote any Unchecked duplicate to Checked. setSelected()
+    // bubbles tri-state up the ancestor chain so groups containing the
+    // duplicate also reflect the change. Caller is responsible for
+    // wrapping this in beginResetModel/endResetModel, so we don't need
+    // to emit dataChanged.
+    std::function< void( PackageTreeItem* ) > promote = [ & ]( PackageTreeItem* node )
+    {
+        for ( int i = 0; i < node->childCount(); ++i )
+        {
+            auto* child = node->child( i );
+            if ( !child )
+            {
+                continue;
+            }
+            if ( child->isPackage() && child->isSelected() != Qt::Checked
+                 && checkedNames.contains( child->packageName() ) )
+            {
+                child->setSelected( Qt::Checked );
+            }
+            if ( child->childCount() > 0 )
+            {
+                promote( child );
+            }
+        }
+    };
+    promote( m_rootItem );
+}
+
 Qt::ItemFlags
 PackageModel::flags( const QModelIndex& index ) const
 {
@@ -493,6 +565,12 @@ PackageModel::setupModelData( const QVariantList& l )
     delete m_rootItem;
     m_rootItem = new PackageTreeItem();
     setupModelData( l, m_rootItem );
+    // Promote unchecked duplicates of any checked package — keeps the
+    // initial UI state consistent across groups when the same package
+    // appears in more than one place (e.g. `spotify` in both "Included
+    // Extras" and "Media & Entertainment"). Mirrors setData()'s runtime
+    // cross-group sync.
+    syncDuplicatePackageSelections();
     endResetModel();
 }
 
@@ -525,6 +603,10 @@ PackageModel::appendModelData( const QVariantList& groupList )
 
         // Add the new data to the model
         setupModelData( groupList, m_rootItem );
+        // Re-run the duplicate sync after the merge — a newly appended
+        // group may add a Checked package whose duplicate already lives
+        // in an earlier group, or vice versa.
+        syncDuplicatePackageSelections();
 
         endResetModel();
     }

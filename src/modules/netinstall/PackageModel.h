@@ -115,6 +115,21 @@ private:
      */
     QModelIndex indexFor( PackageTreeItem* item ) const;
 
+    /** @brief Sync initial check state across duplicate packages.
+     *
+     * After setupModelData() finishes building the tree, walk it once to
+     * collect packageName() for every Checked leaf, then walk again and
+     * promote any Unchecked leaf with a matching name to Checked. The
+     * setSelected() call on each promoted leaf bubbles a tri-state up
+     * its ancestors so groups containing the duplicate also reflect the
+     * change.
+     *
+     * This makes init-time match the runtime behaviour in setData()'s
+     * cross-group sync — a package selected by being in "Included Extras"
+     * appears checked in every other group it also lives in.
+     */
+    void syncDuplicatePackageSelections();
+
     PackageTreeItem* m_rootItem = nullptr;
     PackageTreeItem::List m_hiddenItems;
 };
