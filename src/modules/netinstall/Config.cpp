@@ -23,6 +23,8 @@
 #include "utils/Retranslator.h"
 #include "utils/Variant.h"
 
+#include <QSet>
+
 #include <QNetworkReply>
 
 Config::Config( QObject* parent )
@@ -162,14 +164,43 @@ Config::finalizeGlobalStorage( const Calamares::ModuleSystem::InstanceKey& key )
     QVariantList installPackages;
     QVariantList tryInstallPackages;
 
+    // Dedupe by packageName: the same package can appear in more than
+    // one group (e.g. "spotify" in both "Included Extras" and "Media
+    // & Entertainment"). PackageModel::setData keeps the checkboxes
+    // in lockstep across groups, but getPackages() still returns one
+    // PackageTreeItem* per visible entry — so without this dedupe we'd
+    // queue "yay -S spotify" twice. Critical wins over try-install
+    // on conflict so a packageOperations install entry is never
+    // demoted to try_install just because a duplicate elsewhere
+    // wasn't marked critical.
+    QSet< QString > seenCritical;
+    QSet< QString > seenTry;
+
     for ( const auto& package : packages )
     {
+        const QString name = package->packageName();
         if ( package->isCritical() )
         {
+            if ( !name.isEmpty() && seenCritical.contains( name ) )
+            {
+                continue;
+            }
+            if ( !name.isEmpty() )
+            {
+                seenCritical.insert( name );
+            }
             installPackages.append( package->toOperation() );
         }
         else
         {
+            if ( !name.isEmpty() && ( seenCritical.contains( name ) || seenTry.contains( name ) ) )
+            {
+                continue;
+            }
+            if ( !name.isEmpty() )
+            {
+                seenTry.insert( name );
+            }
             tryInstallPackages.append( package->toOperation() );
         }
     }

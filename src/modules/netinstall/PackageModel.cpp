@@ -172,7 +172,8 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
     if ( role == Qt::CheckStateRole && index.isValid() )
     {
         PackageTreeItem* item = static_cast< PackageTreeItem* >( index.internalPointer() );
-        item->setSelected( static_cast< Qt::CheckState >( value.toInt() ) );
+        const auto newState = static_cast< Qt::CheckState >( value.toInt() );
+        item->setSelected( newState );
 
         // setSelected cascades to every descendant and bubbles a tri-state up
         // the ancestors. The view only repaints regions named in dataChanged,
@@ -200,8 +201,99 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
         {
             emit dataChanged( ancestor, ancestor.sibling( ancestor.row(), columnCount( ancestor ) - 1 ), rolesChanged );
         }
+
+        // Cross-group sync: if the same package appears in multiple
+        // groups (e.g. "spotify" in both "Included Extras" and "Media
+        // & Entertainment"), keep their checkboxes in lockstep so the
+        // user doesn't end up with one checked and one unchecked while
+        // looking at the same package. finalizeGlobalStorage also
+        // dedupes by packageName so we never queue the same install
+        // twice — this is purely for visual consistency.
+        if ( item->isPackage() )
+        {
+            const QString name = item->packageName();
+            PackageTreeItem::List duplicates;
+            collectPackagesByName( m_rootItem, name, duplicates );
+            for ( auto* dup : duplicates )
+            {
+                if ( dup == item || dup->isSelected() == newState )
+                {
+                    continue;
+                }
+                dup->setSelected( newState );
+                // Repaint the duplicate's row and every ancestor — the
+                // setSelected call above already recomputed the
+                // tri-state on each ancestor, but the view doesn't know
+                // until we emit dataChanged for those indices.
+                const QModelIndex dupIdx = indexFor( dup );
+                if ( !dupIdx.isValid() )
+                {
+                    continue;
+                }
+                emit dataChanged( dupIdx,
+                                  dupIdx.sibling( dupIdx.row(), columnCount( dupIdx ) - 1 ),
+                                  rolesChanged );
+                for ( QModelIndex anc = parent( dupIdx ); anc.isValid(); anc = parent( anc ) )
+                {
+                    emit dataChanged( anc,
+                                      anc.sibling( anc.row(), columnCount( anc ) - 1 ),
+                                      rolesChanged );
+                }
+            }
+        }
     }
     return true;
+}
+
+void
+PackageModel::collectPackagesByName( PackageTreeItem* node,
+                                     const QString& name,
+                                     PackageTreeItem::List& out ) const
+{
+    if ( !node || name.isEmpty() )
+    {
+        return;
+    }
+    for ( int i = 0; i < node->childCount(); ++i )
+    {
+        auto* child = node->child( i );
+        if ( !child )
+        {
+            continue;
+        }
+        if ( child->isPackage() && child->packageName() == name )
+        {
+            out.append( child );
+        }
+        // Recurse — subgroups are allowed in the YAML schema, and a
+        // duplicate package could live anywhere in the tree.
+        if ( child->childCount() > 0 )
+        {
+            collectPackagesByName( child, name, out );
+        }
+    }
+}
+
+QModelIndex
+PackageModel::indexFor( PackageTreeItem* item ) const
+{
+    if ( !item || item == m_rootItem )
+    {
+        return QModelIndex();
+    }
+    PackageTreeItem* parentItem = item->parentItem();
+    if ( !parentItem )
+    {
+        return QModelIndex();
+    }
+    for ( int row = 0; row < parentItem->childCount(); ++row )
+    {
+        if ( parentItem->child( row ) == item )
+        {
+            return createIndex( row, 0, item );
+        }
+    }
+    return QModelIndex();
 }
 
 Qt::ItemFlags

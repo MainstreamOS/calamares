@@ -96,6 +96,25 @@ private:
 
     void setupModelData( const QVariantList& l, PackageTreeItem* parent );
 
+    /** @brief Walk the tree and collect every package-leaf whose
+     *  packageName() equals @p name.
+     *
+     * Used by setData() to synchronise checkbox state across groups for
+     * packages that appear in more than one place (e.g. a "Spotify"
+     * entry in both "Included Extras" and "Media & Entertainment").
+     */
+    void collectPackagesByName( PackageTreeItem* node,
+                                const QString& name,
+                                PackageTreeItem::List& out ) const;
+
+    /** @brief Build the QModelIndex pointing at @p item.
+     *
+     * Walks up to the root via parentItem() to determine each row, then
+     * builds a column-0 index. Returns invalid for the root or for
+     * orphan items.
+     */
+    QModelIndex indexFor( PackageTreeItem* item ) const;
+
     PackageTreeItem* m_rootItem = nullptr;
     PackageTreeItem::List m_hiddenItems;
 };
