@@ -471,7 +471,24 @@ CalamaresWindow::CalamaresWindow( QWidget* parent )
     int h = qBound( minimumSize.height(), windowDimensionToPixels( brandingSizes.second ), availableSize.height() );
 
     cDebug() << Logger::SubEntry << "Proposed window size:" << w << h;
-    resize( w, h );
+    if ( branding->windowExpands() )
+    {
+        // Default Calamares behaviour: the window may grow if a step's
+        // content asks for more vertical room (see ensureSize wiring below).
+        resize( w, h );
+    }
+    else
+    {
+        // branding.desc set windowExpanding: noexpand — pin the window to
+        // the designed size. setFixedSize sets minimum == maximum, which
+        // the X11/Wayland window manager exposes via WM_NORMAL_HINTS as
+        // "non-resizable". Tiling compositors (Hyprland, Sway, river)
+        // treat non-resizable windows as floats automatically, so the
+        // installer keeps its designed geometry without needing a
+        // per-WM window rule. The slideshow QML and stylesheet padding
+        // assume exact pane dimensions; this guarantees them.
+        setFixedSize( w, h );
+    }
 
     QWidget* baseWidget = this;
     if ( !( branding->imagePath( ImageEntry::ProductWallpaper ).isEmpty() ) )
