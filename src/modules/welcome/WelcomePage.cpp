@@ -35,6 +35,52 @@
 #include <QFocusEvent>
 #include <QLabel>
 #include <QMessageBox>
+#include <QResizeEvent>
+
+namespace
+{
+/** @brief QLabel that scales its pixmap to fill the label while preserving aspect.
+ *
+ * QLabel's built-in setScaledContents() stretches without preserving aspect,
+ * and the default behaviour shows the pixmap at native size. This helper holds
+ * the source pixmap and re-scales it on every resize so the visible image
+ * always fills the widget with KeepAspectRatio. Used in WelcomePage to render
+ * productWelcome as a "full" image in place of the textual welcome blurb.
+ */
+class ScaledImageLabel : public QLabel
+{
+public:
+    explicit ScaledImageLabel( QWidget* parent = nullptr ) : QLabel( parent )
+    {
+        setAlignment( Qt::AlignCenter );
+        setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
+        setMinimumSize( 1, 1 );  // allow the label to shrink below pixmap size
+    }
+    void setSource( const QPixmap& pixmap )
+    {
+        m_source = pixmap;
+        updateScaled();
+    }
+
+protected:
+    void resizeEvent( QResizeEvent* event ) override
+    {
+        QLabel::resizeEvent( event );
+        updateScaled();
+    }
+
+private:
+    void updateScaled()
+    {
+        if ( m_source.isNull() )
+        {
+            return;
+        }
+        QLabel::setPixmap( m_source.scaled( size(), Qt::KeepAspectRatio, Qt::SmoothTransformation ) );
+    }
+    QPixmap m_source;
+};
+}  // namespace
 
 WelcomePage::WelcomePage( Config* config, QWidget* parent )
     : QWidget( parent )
@@ -51,6 +97,32 @@ WelcomePage::WelcomePage( Config* config, QWidget* parent )
     // insert system-check widget below welcome text
     const int welcome_text_idx = ui->verticalLayout->indexOf( ui->mainText );
     ui->verticalLayout->insertWidget( welcome_text_idx + 1, m_checkingWidget );
+
+    // Mainstream fork: hide the textual welcome blurb and render productWelcome
+    // as a full-size image in its place. The ScaledImageLabel auto-fits the
+    // pixmap with KeepAspectRatio on every resize so the image fills whatever
+    // vertical space the layout leaves between the top spacer and the
+    // language/buttons rows. ui->mainText is removed from the layout (not just
+    // hidden) so the image doesn't fight a zero-height-but-still-laid-out text
+    // widget for stretch space.
+    {
+        const QString welcomeImagePath = Branding::instance()->imagePath( Branding::ProductWelcome );
+        if ( !welcomeImagePath.isEmpty() )
+        {
+            QPixmap welcomePixmap( welcomeImagePath );
+            if ( !welcomePixmap.isNull() )
+            {
+                auto* welcomeImage = new ScaledImageLabel( this );
+                welcomeImage->setSource( welcomePixmap );
+                ui->verticalLayout->removeWidget( ui->mainText );
+                ui->mainText->hide();
+                // After removeWidget the checking widget is now at welcome_text_idx;
+                // insert the image just before it so the order is:
+                //   aboveTextSpacer → welcomeImage → checkerContainer → language row → buttons
+                ui->verticalLayout->insertWidget( welcome_text_idx, welcomeImage, /*stretch=*/ 1 );
+            }
+        }
+    }
 
     // insert optional logo banner image above welcome text
     QString bannerPath = Branding::instance()->imagePath( Branding::ProductBanner );
