@@ -96,25 +96,28 @@ ResultsListWidget::requirementsComplete()
         // fill the entire allocated space — no inner margins, no caption.
         m_explanation->hide();
 
-        // The constructor ended mainLayout with addStretch() to push the
-        // QListView contents up when requirements aren't satisfied. Now
-        // that we're swapping in the productWelcome image, that trailing
-        // expanding spacer would compete with the image's Expanding size
-        // policy — Qt splits the leftover vertical space between them and
-        // the image only gets ~half. Walk the layout backwards and pull
-        // out the trailing vertically-expanding spacer so the image label
-        // owns the full available area below the (now-hidden) explanation.
+        // The constructor seeded mainLayout with two QSpacerItems sized for
+        // the QListView path: an addSpacing(defaultFontHeight/2) under the
+        // explanation row to breathe before the list, and a trailing
+        // addStretch() to push the list contents up. With the explanation
+        // hidden and the list deleted, both spacers are just dead vertical
+        // padding around the productWelcome image — strip them all in one
+        // pass so the image label inherits the full layout area.
         for ( int i = m_centralLayout->count() - 1; i >= 0; --i )
         {
             QLayoutItem* item = m_centralLayout->itemAt( i );
-            QSpacerItem* spacer = item ? item->spacerItem() : nullptr;
-            if ( spacer && ( spacer->expandingDirections() & Qt::Vertical ) )
+            if ( item && item->spacerItem() )
             {
                 m_centralLayout->takeAt( i );
                 delete item;
-                break;
             }
         }
+
+        // Also zero the layout's own contentsMargins (Qt defaults to roughly
+        // 11 px on each side via the style metrics). The welcome step's
+        // outer layout already provides whatever framing chrome is needed —
+        // an extra 11 px inset here pushes the image away from every edge.
+        m_centralLayout->setContentsMargins( 0, 0, 0, 0 );
 
         if ( !Calamares::Branding::instance()->imagePath( Calamares::Branding::ProductWelcome ).isEmpty() )
         {

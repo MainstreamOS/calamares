@@ -60,6 +60,13 @@ WelcomePage::WelcomePage( Config* config, QWidget* parent )
     ui->verticalLayout->removeWidget( ui->mainText );
     ui->mainText->hide();
 
+    // The .ui file gives aboveTextSpacer a 20×40 fixed reserve to push the
+    // (now-removed) mainText down from the title bar. With mainText gone
+    // and the productWelcome image directly underneath, that reserve is
+    // just dead space above the image — collapse it.
+    ui->aboveTextSpacer->changeSize( 20, 0, QSizePolicy::Fixed, QSizePolicy::Fixed );
+    ui->aboveTextSpacer->invalidate();
+
     // insert optional logo banner image above welcome text
     QString bannerPath = Branding::instance()->imagePath( Branding::ProductBanner );
     if ( !bannerPath.isEmpty() )
