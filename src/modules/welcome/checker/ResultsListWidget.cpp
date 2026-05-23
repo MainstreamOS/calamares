@@ -96,6 +96,26 @@ ResultsListWidget::requirementsComplete()
         // fill the entire allocated space — no inner margins, no caption.
         m_explanation->hide();
 
+        // The constructor ended mainLayout with addStretch() to push the
+        // QListView contents up when requirements aren't satisfied. Now
+        // that we're swapping in the productWelcome image, that trailing
+        // expanding spacer would compete with the image's Expanding size
+        // policy — Qt splits the leftover vertical space between them and
+        // the image only gets ~half. Walk the layout backwards and pull
+        // out the trailing vertically-expanding spacer so the image label
+        // owns the full available area below the (now-hidden) explanation.
+        for ( int i = m_centralLayout->count() - 1; i >= 0; --i )
+        {
+            QLayoutItem* item = m_centralLayout->itemAt( i );
+            QSpacerItem* spacer = item ? item->spacerItem() : nullptr;
+            if ( spacer && ( spacer->expandingDirections() & Qt::Vertical ) )
+            {
+                m_centralLayout->takeAt( i );
+                delete item;
+                break;
+            }
+        }
+
         if ( !Calamares::Branding::instance()->imagePath( Calamares::Branding::ProductWelcome ).isEmpty() )
         {
             QPixmap theImage
