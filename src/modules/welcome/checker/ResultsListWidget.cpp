@@ -89,26 +89,27 @@ ResultsListWidget::requirementsComplete()
         delete m_centralWidget;
         m_centralWidget = nullptr;
 
+        // Mainstream fork: when requirements pass, this widget becomes the
+        // sole content of the welcome step (the textual blurb in
+        // WelcomePage.ui's mainText is hidden by our WelcomePage patch).
+        // Hide the explanation paragraph and let the productWelcome image
+        // fill the entire allocated space — no inner margins, no caption.
+        m_explanation->hide();
+
         if ( !Calamares::Branding::instance()->imagePath( Calamares::Branding::ProductWelcome ).isEmpty() )
         {
             QPixmap theImage
                 = QPixmap( Calamares::Branding::instance()->imagePath( Calamares::Branding::ProductWelcome ) );
             if ( !theImage.isNull() )
             {
-                QLabel* imageLabel;
-                if ( Calamares::Branding::instance()->welcomeExpandingLogo() )
-                {
-                    FixedAspectRatioLabel* p = new FixedAspectRatioLabel;
-                    p->setPixmap( theImage );
-                    imageLabel = p;
-                }
-                else
-                {
-                    imageLabel = new QLabel;
-                    imageLabel->setPixmap( theImage );
-                }
-
-                imageLabel->setContentsMargins( 4, Calamares::defaultFontHeight() * 3 / 4, 4, 4 );
+                // Always use FixedAspectRatioLabel so the pixmap scales to
+                // fill the label with KeepAspectRatio (the previous
+                // welcomeExpandingLogo branding flag gated this; we make it
+                // unconditional because a non-scaling QLabel at native
+                // pixmap size makes any "full image" branding overflow).
+                auto* imageLabel = new FixedAspectRatioLabel;
+                imageLabel->setPixmap( theImage );
+                imageLabel->setContentsMargins( 0, 0, 0, 0 );
                 imageLabel->setAlignment( Qt::AlignCenter );
                 imageLabel->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
                 imageLabel->setObjectName( "welcomeLogo" );
@@ -116,6 +117,5 @@ ResultsListWidget::requirementsComplete()
                 m_centralLayout->addWidget( imageLabel );
             }
         }
-        m_explanation->setAlignment( Qt::AlignCenter );
     }
 }
