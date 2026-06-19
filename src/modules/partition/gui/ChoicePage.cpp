@@ -1411,12 +1411,7 @@ ChoicePage::setupActions()
 
     if ( atLeastOneCanBeResized )
     {
-        // Mainstream: the "Install alongside" (dual-boot) choice is not offered
-        // — this is a guided, erase-only installer (partition.conf:
-        // initialPartitioningChoice erase, allowManualPartitioning false). Keep
-        // the button hidden and unchecked even when a resizable partition exists.
-        m_alongsideButton->hide();
-        force_uncheck( m_grp, m_alongsideButton );
+        m_alongsideButton->show();
     }
     else
     {
