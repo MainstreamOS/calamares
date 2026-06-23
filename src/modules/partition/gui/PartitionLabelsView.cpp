@@ -224,6 +224,33 @@ PartitionLabelsView::buildTexts( const QModelIndex& index ) const
         {
             firstLine.remove( 0, 5 );  // "/dev/"
         }
+
+        // os-prober gave no name, so the label is just the device node. Add a
+        // plain-language hint about what the partition holds so non-technical
+        // users can tell them apart; unrecognised content stays unlabelled.
+        const int fsType = index.data( PartitionModel::FileSystemTypeRole ).toInt();
+        QString hint;
+        if ( ( getPartitionModelIndexFlags( index ) & KPM_PARTITION_FLAG_ESP )
+             && ( fsType == FileSystem::Fat32 || fsType == FileSystem::Fat16
+                  || fsType == FileSystem::Fat12 ) )
+        {
+            hint = tr( "EFI", "@label" );
+        }
+        else if ( fsType == FileSystem::Ntfs || fsType == FileSystem::BitLocker )
+        {
+            hint = tr( "Windows", "@label" );
+        }
+        else if ( fsType == FileSystem::Ext4 || fsType == FileSystem::Ext3
+                  || fsType == FileSystem::Ext2 || fsType == FileSystem::Btrfs
+                  || fsType == FileSystem::Xfs || fsType == FileSystem::F2fs )
+        {
+            hint = tr( "Linux", "@label" );
+        }
+
+        if ( !hint.isEmpty() )
+        {
+            firstLine = firstLine + QStringLiteral( " (" ) + hint + QLatin1Char( ')' );
+        }
     }
     else
     {
