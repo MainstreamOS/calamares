@@ -1061,7 +1061,7 @@ ChoicePage::updateActionChoicePreview( InstallChoice choice )
             }
         }
         m_previewBeforeLabel->setText( tr( "Current:", "@label" ) );
-        m_selectLabel->setText( tr( "<strong>Select a partition to shrink, "
+        m_selectLabel->setText( tr( "<strong>Select a partition below to shrink, "
                                     "then drag the bottom bar to resize</strong>" ) );
         m_selectLabel->show();
 
