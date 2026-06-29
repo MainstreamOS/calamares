@@ -109,6 +109,12 @@ protected:
             return QObject::eventFilter( obj, ev );
         }
 
+        const auto t = ev->type();
+        if ( t != QEvent::Show && t != QEvent::Resize && t != QEvent::Paint )
+        {
+            return QObject::eventFilter( obj, ev );
+        }
+
         auto* frame = qobject_cast< QFrame* >( obj );
         if ( !frame || !frame->property( PopupFrameProperty ).toBool() )
         {

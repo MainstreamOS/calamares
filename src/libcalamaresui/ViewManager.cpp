@@ -558,28 +558,22 @@ ViewManager::confirmCancelInstallation()
     // QSS gives every QPushButton. Pull the branding's dark-tone glyphs
     // (m3onPrimary fill) so the dialog-cancel / dialog-ok-apply marks here
     // match the same dark-on-light treatment used elsewhere in the shell.
-    if ( auto* yesBtn = mb.button( QMessageBox::Yes ) )
+    auto applyBrandedIcon = [ & ]( QMessageBox::StandardButton which, const char* iconName )
     {
-        const QPixmap pm = Calamares::Branding::instance()->image(
-            QStringList { QStringLiteral( "icons/dialog-ok-apply.svg" ),
-                          QStringLiteral( "dialog-ok-apply" ) },
-            QSize( 22, 22 ) );
-        if ( !pm.isNull() )
+        if ( auto* b = mb.button( which ) )
         {
-            yesBtn->setIcon( QIcon( pm ) );
+            const QPixmap pm = Calamares::Branding::instance()->image(
+                QStringList { QStringLiteral( "icons/" ) + QLatin1String( iconName ) + QStringLiteral( ".svg" ),
+                              QLatin1String( iconName ) },
+                QSize( 22, 22 ) );
+            if ( !pm.isNull() )
+            {
+                b->setIcon( QIcon( pm ) );
+            }
         }
-    }
-    if ( auto* noBtn = mb.button( QMessageBox::No ) )
-    {
-        const QPixmap pm = Calamares::Branding::instance()->image(
-            QStringList { QStringLiteral( "icons/dialog-cancel.svg" ),
-                          QStringLiteral( "dialog-cancel" ) },
-            QSize( 22, 22 ) );
-        if ( !pm.isNull() )
-        {
-            noBtn->setIcon( QIcon( pm ) );
-        }
-    }
+    };
+    applyBrandedIcon( QMessageBox::Yes, "dialog-ok-apply" );
+    applyBrandedIcon( QMessageBox::No, "dialog-cancel" );
     int response = mb.exec();
     return ( response == QMessageBox::Yes ) ? Confirmation::CancelInstallation : Confirmation::Continue;
 }

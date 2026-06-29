@@ -14,7 +14,6 @@
 #include "ImageRegistry.h"
 
 #include <QBrush>
-#include <QFile>
 #include <QFont>
 #include <QFontMetrics>
 #include <QLayout>
@@ -26,24 +25,6 @@
 
 namespace Calamares
 {
-
-// Mainstream fork: when the active branding ships an icons/<name>.svg under
-// componentDirectory, prefer it over the qrc fallback. Lets a branding
-// override status pixmaps (e.g. password requirement met/not met) without
-// patching every call site or shipping a custom .qrc.
-static QPixmap
-brandedPixmap( const QString& relPath, const QSize& size )
-{
-    if ( auto* b = Branding::instance() )
-    {
-        const QString abs = b->componentDirectory() + QStringLiteral( "/" ) + relPath;
-        if ( QFile::exists( abs ) )
-        {
-            return ImageRegistry::instance()->pixmap( abs, size );
-        }
-    }
-    return QPixmap();
-}
 
 static int s_defaultFontSize = 0;
 static int s_defaultFontHeight = 0;
@@ -57,7 +38,7 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
     switch ( type )
     {
     case Yes:
-        pixmap = brandedPixmap( QStringLiteral( "icons/green-password-met.svg" ), size );
+        pixmap = Branding::instance()->image( QStringLiteral( "icons/green-password-met.svg" ), size );
         if ( pixmap.isNull() )
         {
             pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/yes.svgz", size );
@@ -65,7 +46,7 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
         break;
 
     case No:
-        pixmap = brandedPixmap( QStringLiteral( "icons/red-password-not-met.svg" ), size );
+        pixmap = Branding::instance()->image( QStringLiteral( "icons/red-password-not-met.svg" ), size );
         if ( pixmap.isNull() )
         {
             pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/no.svgz", size );
@@ -136,7 +117,7 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
         // Users module's password-requirement list and other "passed" flags
         // route through StatusOk, not Yes — share the green-password-met
         // override so both code paths see the same branded icon.
-        pixmap = brandedPixmap( QStringLiteral( "icons/green-password-met.svg" ), size );
+        pixmap = Branding::instance()->image( QStringLiteral( "icons/green-password-met.svg" ), size );
         if ( pixmap.isNull() )
         {
             pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/state-ok.svg", size );
@@ -150,7 +131,7 @@ defaultPixmap( ImageType type, ImageMode mode, const QSize& size )
     case StatusError:
         // Same reasoning as StatusOk — alias to the red-password-not-met
         // override so users-page failure markers match the new look.
-        pixmap = brandedPixmap( QStringLiteral( "icons/red-password-not-met.svg" ), size );
+        pixmap = Branding::instance()->image( QStringLiteral( "icons/red-password-not-met.svg" ), size );
         if ( pixmap.isNull() )
         {
             pixmap = ImageRegistry::instance()->pixmap( RESPATH "images/state-error.svg", size );
