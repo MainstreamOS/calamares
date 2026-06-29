@@ -14,6 +14,7 @@
 #include "PackageTreeItem.h"
 
 #include <QAbstractItemModel>
+#include <QHash>
 #include <QObject>
 #include <QString>
 
@@ -107,6 +108,23 @@ private:
                                 const QString& name,
                                 PackageTreeItem::List& out ) const;
 
+    /** @brief Rebuild the packageName() → items index from the tree.
+     *
+     * Populates m_packagesByName by walking the whole tree once. Must be
+     * called at every point the tree structure changes (inside the
+     * beginResetModel/endResetModel brackets of setupModelData() and
+     * appendModelData()), because the index holds raw PackageTreeItem*
+     * and appendModelData() prunes/deletes children — a stale index would
+     * dangle.
+     */
+    void rebuildPackageNameIndex();
+
+    /** @brief Emit dataChanged across all columns of @p idx's row. */
+    void emitRowChanged( const QModelIndex& idx );
+
+    /** @brief Emit dataChanged for @p idx's row and every ancestor row. */
+    void emitRowAndAncestorsChanged( const QModelIndex& idx );
+
     /** @brief Build the QModelIndex pointing at @p item.
      *
      * Walks up to the root via parentItem() to determine each row, then
@@ -132,6 +150,7 @@ private:
 
     PackageTreeItem* m_rootItem = nullptr;
     PackageTreeItem::List m_hiddenItems;
+    QHash< QString, PackageTreeItem::List > m_packagesByName;
 };
 
 #endif  // PACKAGEMODEL_H

@@ -182,7 +182,6 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
         // so emit for the toggled row + every descendant + every ancestor.
         // (Original emit had row/column swapped and missed children entirely,
         // leaving child checkboxes stale until a hover triggered a repaint.)
-        const QVector< int > rolesChanged { Qt::CheckStateRole };
         std::function< void( const QModelIndex& ) > emitSubtree
             = [&]( const QModelIndex& idx )
             {
@@ -190,7 +189,7 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
                 {
                     return;
                 }
-                emit dataChanged( idx, idx.sibling( idx.row(), columnCount( idx ) - 1 ), rolesChanged );
+                emitRowChanged( idx );
                 const int rows = rowCount( idx );
                 for ( int r = 0; r < rows; ++r )
                 {
@@ -201,7 +200,7 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
 
         for ( QModelIndex ancestor = parent( index ); ancestor.isValid(); ancestor = parent( ancestor ) )
         {
-            emit dataChanged( ancestor, ancestor.sibling( ancestor.row(), columnCount( ancestor ) - 1 ), rolesChanged );
+            emitRowChanged( ancestor );
         }
 
         // Cross-group sync: if the same package appears in multiple
@@ -222,7 +221,7 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
         //     package in the toggled group changes state but the same
         //     package in "Included Extras" (or wherever else it lives)
         //     stays at its old state and the two drift out of sync.
-        auto syncDuplicatesFor = [ this, &rolesChanged ]( PackageTreeItem* leaf )
+        auto syncDuplicatesFor = [ this ]( PackageTreeItem* leaf )
         {
             if ( !leaf || !leaf->isPackage() )
             {
@@ -234,8 +233,7 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
                 return;
             }
             const Qt::CheckState state = leaf->isSelected();
-            PackageTreeItem::List duplicates;
-            collectPackagesByName( m_rootItem, name, duplicates );
+            const PackageTreeItem::List duplicates = m_packagesByName.value( name );
             for ( auto* dup : duplicates )
             {
                 if ( dup == leaf || dup->isSelected() == state )
@@ -247,20 +245,7 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
                 // setSelected call above already recomputed the tri-state
                 // on each ancestor, but the view doesn't know until we
                 // emit dataChanged for those indices.
-                const QModelIndex dupIdx = indexFor( dup );
-                if ( !dupIdx.isValid() )
-                {
-                    continue;
-                }
-                emit dataChanged( dupIdx,
-                                  dupIdx.sibling( dupIdx.row(), columnCount( dupIdx ) - 1 ),
-                                  rolesChanged );
-                for ( QModelIndex anc = parent( dupIdx ); anc.isValid(); anc = parent( anc ) )
-                {
-                    emit dataChanged( anc,
-                                      anc.sibling( anc.row(), columnCount( anc ) - 1 ),
-                                      rolesChanged );
-                }
+                emitRowAndAncestorsChanged( indexFor( dup ) );
             }
         };
 
@@ -283,6 +268,57 @@ PackageModel::setData( const QModelIndex& index, const QVariant& value, int role
         walkSubtree( item );
     }
     return true;
+}
+
+void
+PackageModel::emitRowChanged( const QModelIndex& idx )
+{
+    if ( !idx.isValid() )
+    {
+        return;
+    }
+    static const QVector< int > rolesChanged { Qt::CheckStateRole };
+    emit dataChanged( idx, idx.sibling( idx.row(), columnCount( idx ) - 1 ), rolesChanged );
+}
+
+void
+PackageModel::emitRowAndAncestorsChanged( const QModelIndex& idx )
+{
+    emitRowChanged( idx );
+    for ( QModelIndex anc = parent( idx ); anc.isValid(); anc = parent( anc ) )
+    {
+        emitRowChanged( anc );
+    }
+}
+
+void
+PackageModel::rebuildPackageNameIndex()
+{
+    m_packagesByName.clear();
+    if ( !m_rootItem )
+    {
+        return;
+    }
+    std::function< void( PackageTreeItem* ) > walk = [ & ]( PackageTreeItem* node )
+    {
+        for ( int i = 0; i < node->childCount(); ++i )
+        {
+            auto* child = node->child( i );
+            if ( !child )
+            {
+                continue;
+            }
+            if ( child->isPackage() && !child->packageName().isEmpty() )
+            {
+                m_packagesByName[ child->packageName() ].append( child );
+            }
+            if ( child->childCount() > 0 )
+            {
+                walk( child );
+            }
+        }
+    };
+    walk( m_rootItem );
 }
 
 void
@@ -326,14 +362,7 @@ PackageModel::indexFor( PackageTreeItem* item ) const
     {
         return QModelIndex();
     }
-    for ( int row = 0; row < parentItem->childCount(); ++row )
-    {
-        if ( parentItem->child( row ) == item )
-        {
-            return createIndex( row, 0, item );
-        }
-    }
-    return QModelIndex();
+    return createIndex( item->row(), 0, item );
 }
 
 void
@@ -609,6 +638,7 @@ PackageModel::setupModelData( const QVariantList& l )
     // Extras" and "Media & Entertainment"). Mirrors setData()'s runtime
     // cross-group sync.
     syncDuplicatePackageSelections();
+    rebuildPackageNameIndex();
     endResetModel();
 }
 
@@ -645,6 +675,7 @@ PackageModel::appendModelData( const QVariantList& groupList )
         // group may add a Checked package whose duplicate already lives
         // in an earlier group, or vice versa.
         syncDuplicatePackageSelections();
+        rebuildPackageNameIndex();
 
         endResetModel();
     }
