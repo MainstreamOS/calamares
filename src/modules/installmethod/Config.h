@@ -17,8 +17,8 @@ namespace InstallMethod
 {
 
 /**
- * Five install-method choices the user can pick on the "Get Started"
- * card page that runs immediately before netinstall:
+ * Install-method choices the user can pick on the "Get Started" card
+ * page that runs immediately before netinstall:
  *
  *   Default    — auto-install the curated default-apps netinstall
  *                group and skip the netinstall page entirely
@@ -27,6 +27,10 @@ namespace InstallMethod
  *                and skip the netinstall page
  *   Gaming     — auto-install the gaming netinstall group and skip
  *                the netinstall page
+ *   Console    — install the same default-apps group as Default, but
+ *                the installed system boots straight into the Steam
+ *                gamescope session (a contextualprocess job writes
+ *                boot-target=gaming for mainstream-gaming to honor)
  *   OsOnly     — install nothing from netinstall and skip the page
  *
  * The choice is exposed both as a strong enum (for in-process consumers)
@@ -39,6 +43,7 @@ enum class Choice
     Custom,
     Developer,
     Gaming,
+    Console,
     OsOnly
 };
 
@@ -85,7 +90,7 @@ signals:
 private:
     /** Push the current choice to GlobalStorage so netinstall and other
      *  downstream consumers can react. Three keys are written:
-     *      installmethod_choice              — string: default|custom|os-only
+     *      installmethod_choice              — string: default|custom|console|os-only
      *      installmethod_skipnetinstall      — bool: true unless choice is custom
      *      installmethod_preselect_group     — string: group name to pre-check
      *                                          (empty when choice is os-only) */

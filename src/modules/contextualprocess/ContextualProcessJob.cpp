@@ -85,7 +85,12 @@ ContextualProcessJob::~ContextualProcessJob()
 QString
 ContextualProcessJob::prettyName() const
 {
-    return tr( "Performing contextual processes' job…", "@status" );
+    Calamares::GlobalStorage* gs = Calamares::JobQueue::instance()->globalStorage();
+    if ( gs && gs->value( "installmethod_choice" ).toString() == "console" )
+    {
+        return tr( "Setting up Steam Big Picture…", "@status" );
+    }
+    return tr( "Finishing setup…", "@status" );
 }
 
 Calamares::JobResult

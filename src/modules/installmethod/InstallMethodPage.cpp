@@ -35,10 +35,10 @@ namespace InstallMethod
 namespace
 {
 // SVG glyph render size in logical pixels. Sized for the current
-// 3-card layout (Default / Customize / OS Only). If Developer and
-// Gaming are re-enabled here, drop this to ~110 so five cards still
-// fit in a 1100-wide window.
-constexpr int kIconRenderSize = 128;
+// 4-card layout (Default / Customize / Console Mode / OS Only). If the
+// Developer / group-install Gaming cards are also re-enabled here, drop
+// this to ~104 so all six fit in a 1100-wide window.
+constexpr int kIconRenderSize = 112;
 
 constexpr const char* kCardBaseStyle = R"qss(
     InstallMethod--MethodCard {
@@ -280,7 +280,7 @@ InstallMethodPage::InstallMethodPage( Config* config, QWidget* parent )
     root->addWidget( headerSub );
     root->addSpacing( 12 );
 
-    // ── Three cards laid out horizontally with equal stretch ──────────
+    // ── Four cards laid out horizontally with equal stretch ───────────
     // Each card gets stretch=1, so the row divides its width evenly
     // regardless of content length. The row itself takes stretch=1 in
     // the page's vertical layout so the cards fill the available
@@ -303,13 +303,13 @@ InstallMethodPage::InstallMethodPage( Config* config, QWidget* parent )
     // Custom SVG glyphs shipped via installmethod.qrc — drawn directly
     // in the Mainstream M3 palette so no runtime recolor is needed.
     //
-    // Two additional cards (Gaming, Developer) are intentionally NOT
-    // wired up here even though the Choice::Gaming / Choice::Developer
-    // enum values, Config plumbing, prettyStatus copy, and SVG icons
-    // (gaming.svg, developer.svg) are all kept. Re-enabling them is a
-    // matter of pasting two more addCard() calls below and shrinking
-    // the per-card sizing (see kIconRenderSize note above) so five
-    // cards still fit the window.
+    // The Developer card and the group-install Gaming card are
+    // intentionally NOT wired up here even though their Choice enum
+    // values, Config plumbing, prettyStatus copy, and SVG icons
+    // (developer.svg; gaming.svg is reused below for Console Mode) are
+    // all kept. Re-enabling them is a matter of pasting two more
+    // addCard() calls below and shrinking the per-card sizing (see
+    // kIconRenderSize note above) so all the cards still fit the window.
     addCard( Choice::Default,
              QStringLiteral( ":/installmethod/icons/default-apps.svg" ),
              tr( "Default Apps", "@option" ),
@@ -324,6 +324,15 @@ InstallMethodPage::InstallMethodPage( Config* config, QWidget* parent )
              tr( "Hand-pick from a curated selection of popular Linux applications. "
                  "Perfect if you know what you want or prefer to choose exactly what "
                  "gets installed.",
+                 "@option-description" ) );
+
+    addCard( Choice::Console,
+             QStringLiteral( ":/installmethod/icons/gaming.svg" ),
+             tr( "Console Mode", "@option" ),
+             tr( "The same apps as Default, but your computer boots straight into Steam's "
+                 "gamescope mode like a game console. You can switch to the desktop, and "
+                 "change this anytime in Gaming Mode Setup. The install method may take a "
+                 "few extra minutes.",
                  "@option-description" ) );
 
     addCard( Choice::OsOnly,

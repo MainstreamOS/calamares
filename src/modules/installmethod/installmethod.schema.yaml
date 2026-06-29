@@ -8,7 +8,7 @@ type: object
 properties:
     defaultChoice:
         type: string
-        enum: [ default, custom, os-only ]
+        enum: [ default, custom, console, os-only ]
         default: default
     defaultAppsGroupName:
         type: string

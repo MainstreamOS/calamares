@@ -28,6 +28,8 @@ choiceToString( Choice c )
         return QStringLiteral( "developer" );
     case Choice::Gaming:
         return QStringLiteral( "gaming" );
+    case Choice::Console:
+        return QStringLiteral( "console" );
     case Choice::OsOnly:
         return QStringLiteral( "os-only" );
     }
@@ -49,6 +51,10 @@ choiceFromString( const QString& s )
     if ( trimmed == QStringLiteral( "gaming" ) || trimmed == QStringLiteral( "games" ) )
     {
         return Choice::Gaming;
+    }
+    if ( trimmed == QStringLiteral( "console" ) )
+    {
+        return Choice::Console;
     }
     if ( trimmed == QStringLiteral( "os-only" ) || trimmed == QStringLiteral( "osonly" ) )
     {
@@ -98,6 +104,10 @@ Config::preselectGroupFor( Choice c ) const
     switch ( c )
     {
     case Choice::Default:
+    case Choice::Console:
+        // Console installs the same default-apps group as Default; it
+        // only differs in the boot target, applied post-install by the
+        // contextualprocess job keyed on installmethod_choice=console.
         return m_defaultAppsGroupName;
     case Choice::Developer:
         return m_developerGroupName;
@@ -152,9 +162,10 @@ Config::writeToGlobalStorage() const
     // list. See NetInstallViewStep::onActivate for the direction logic.
     gs->insert( QStringLiteral( "installmethod_skipnetinstall" ), m_choice != Choice::Custom );
 
-    // Default / Developer / Gaming each pre-check a different netinstall
-    // group. Custom and OsOnly both leave the preselect empty — see
-    // preselectGroupFor() for the per-choice rationale.
+    // Default / Console / Developer / Gaming each pre-check a netinstall
+    // group (Default and Console share the default-apps group). Custom and
+    // OsOnly both leave the preselect empty — see preselectGroupFor() for
+    // the per-choice rationale.
     gs->insert( QStringLiteral( "installmethod_preselect_group" ),
                 preselectGroupFor( m_choice ) );
 }
