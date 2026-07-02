@@ -9,6 +9,7 @@ calamares_add_plugin(shellprocess
     SOURCES
         ShellProcessJob.cpp
     SHARED_LIB
+    EMERGENCY
 )
 
 calamares_add_test(shellprocesstest SOURCES Tests.cpp LIBRARIES yamlcpp::yamlcpp)
