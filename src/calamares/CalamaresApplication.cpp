@@ -176,9 +176,13 @@ private:
             return;
         }
 
+        // Translucency belongs on the frame alone, so the rounded mask has clear
+        // corners to show through. On the viewport it also implies
+        // WA_NoSystemBackground, which makes Qt skip the stylesheet's opaque
+        // QAbstractItemView fill and clear the interior back over the rounded
+        // background this filter just painted, leaving a see-through popup.
         view->setAttribute( Qt::WA_TranslucentBackground, true );
         view->setFrameShape( QFrame::NoFrame );
-        view->viewport()->setAttribute( Qt::WA_TranslucentBackground, true );
         view->setContentsMargins( PopupPadding, PopupPadding, PopupPadding, PopupPadding );
 
         // Force the popup's icon size to match the combo button's. Without
