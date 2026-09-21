@@ -38,6 +38,8 @@ properties:
     defaultFileSystemType: { type: string }
     availableFileSystemTypes: { type: array, items: { type: string } }
     mountpointFilesystemRestrictions: { type: array } # TODO: specify items
+    directoryFilesystemRestrictions: { type: array } # TODO: specify items
+    directoryFilesystemRestrictionsEnforced: { type: boolean }
 
     luksGeneration: { type: string, enum: [luks1, luks2] }  # Also allows "luks" as alias of "luks1"
     enableLuksAutomatedPartitioning: { type: boolean, default: false }

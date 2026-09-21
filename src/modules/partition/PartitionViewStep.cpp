@@ -944,6 +944,8 @@ PartitionViewStep::setConfigurationMap( const QVariantMap& configurationMap )
 
     m_core->partitionLayout().init( m_config->defaultFsType(), configurationMap.value( "partitionLayout" ).toList() );
     m_core->dirFSRestrictLayout().init( configurationMap.value( "directoryFilesystemRestrictions" ).toList() );
+    m_core->dirFSRestrictLayout().setEnforced(
+        Calamares::getBool( configurationMap, "directoryFilesystemRestrictionsEnforced", false ) );
 }
 
 Calamares::JobList

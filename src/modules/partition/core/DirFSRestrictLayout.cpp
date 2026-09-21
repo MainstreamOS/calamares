@@ -31,6 +31,7 @@ DirFSRestrictLayout::DirFSRestrictLayout() {}
 
 DirFSRestrictLayout::DirFSRestrictLayout( const DirFSRestrictLayout& layout )
     : m_dirFSRestrictLayout( layout.m_dirFSRestrictLayout )
+    , m_enforced( layout.m_enforced )
 {
 }
 
@@ -38,10 +39,12 @@ DirFSRestrictLayout::~DirFSRestrictLayout() {}
 
 DirFSRestrictLayout::DirFSRestrictEntry::DirFSRestrictEntry( const QString& path,
                                                              QList< FileSystem::Type > allowedFSTypes,
-                                                             bool onlyWhenMountpoint )
+                                                             bool onlyWhenMountpoint,
+                                                             const QString& explanation )
     : dirPath( path )
     , dirAllowedFSTypes( allowedFSTypes )
     , useOnlyWhenMountpoint( onlyWhenMountpoint )
+    , message( explanation )
 {
 }
 
@@ -87,7 +90,8 @@ DirFSRestrictLayout::init( const QVariantList& config )
         {
             efiNeedsSet = false;
         }
-        DirFSRestrictEntry restrictEntry( directory, allowedFSTypes, onlyWhenMountpoint );
+        DirFSRestrictEntry restrictEntry(
+            directory, allowedFSTypes, onlyWhenMountpoint, Calamares::getString( pentry, "message" ) );
         m_dirFSRestrictLayout.append( restrictEntry );
     }
 
@@ -198,6 +202,24 @@ DirFSRestrictLayout::diagnoseFSConflict( const QString& path, const FileSystem::
         }
     }
 
+    return QString();
+}
+
+QString
+DirFSRestrictLayout::restrictionMessage( const QString& path )
+{
+    for ( const auto& entry : m_dirFSRestrictLayout )
+    {
+        QString dirPath = entry.dirPath;
+        if ( dirPath == "efi" )
+        {
+            dirPath = Calamares::JobQueue::instance()->globalStorage()->value( "efiSystemPartition" ).toString();
+        }
+        if ( dirPath == path && !entry.message.isEmpty() )
+        {
+            return entry.message;
+        }
+    }
     return QString();
 }
 

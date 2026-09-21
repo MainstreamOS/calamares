@@ -30,6 +30,7 @@ public:
         QString dirPath;
         QList< FileSystem::Type > dirAllowedFSTypes;
         bool useOnlyWhenMountpoint = false;
+        QString message;
 
         /// @brief All-zeroes DirFSRestrictEntry
         DirFSRestrictEntry() = default;
@@ -39,7 +40,8 @@ public:
          */
         DirFSRestrictEntry( const QString& path,
                             QList< FileSystem::Type > allowedFSTypes,
-                            bool onlyWhenMountpoint );
+                            bool onlyWhenMountpoint,
+                            const QString& explanation = QString() );
         /// @brief Copy DirFSRestrictEntry
         DirFSRestrictEntry( const DirFSRestrictEntry& e ) = default;
     };
@@ -78,8 +80,26 @@ public:
     /// @brief get a global filesystem whitelist
     QList< FileSystem::Type > anyAllowedFSTypes();
 
+    /** @brief make the restrictions binding
+     *
+     * With @p enforced set, a combination the rules disallow cannot be
+     * accepted at all rather than accepted with a warning.
+     */
+    void setEnforced( bool enforced ) { m_enforced = enforced; }
+
+    /// @brief whether a disallowed filesystem may still be accepted
+    bool isEnforced() const { return m_enforced; }
+
+    /** @brief the explanation configured for the rule covering @p path
+     *
+     * Empty when that rule gave none, so each rule speaks for itself and a
+     * reason written for one mountpoint is never shown for another.
+     */
+    QString restrictionMessage( const QString& path );
+
 private:
     QList< DirFSRestrictEntry > m_dirFSRestrictLayout;
+    bool m_enforced = false;
 
     QList< FileSystem::Type > fullFSList();
 };

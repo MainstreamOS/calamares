@@ -142,18 +142,26 @@ validateMountPoint( PartitionCoreModule* core, const QString& mountPoint, const 
             }
         }
 
+        auto& restrictions = core->dirFSRestrictLayout();
         if ( !fsTypeIsAllowed ) {
-            msg = CreatePartitionDialog::tr( "Filesystem is prohibited by this distro. Consider selecting another one.", "@info" );
-            ok = true;
+            const QString reason = restrictions.restrictionMessage( QStringLiteral( "any" ) );
+            msg = reason.isEmpty()
+                ? CreatePartitionDialog::tr( "Filesystem is prohibited by this distro. Consider selecting another one.", "@info" )
+                : reason;
+            ok = !restrictions.isEnforced();
         }
         else if ( !fsTypeIsAllowedForMountPoint ) {
-            msg = CreatePartitionDialog::tr( "Filesystem is prohibited for use on this mountpoint. Consider selecting a different filesystem or mountpoint.", "@info" );
-            ok = true;
+            const QString reason = restrictions.restrictionMessage( mountPoint );
+            msg = reason.isEmpty()
+                ? CreatePartitionDialog::tr( "Filesystem is prohibited for use on this mountpoint. Consider selecting a different filesystem or mountpoint.", "@info" )
+                : reason;
+            ok = !restrictions.isEnforced();
         }
     }
 
     if ( label )
     {
+        label->setWordWrap( true );
         label->setText( msg );
     }
     if ( button )
