@@ -15,6 +15,7 @@
 #include <QBoxLayout>
 #include <QFutureWatcher>
 #include <QLabel>
+#include <QPalette>
 #include <QtConcurrent/QtConcurrent>
 
 
@@ -29,6 +30,16 @@ ScanningDialog::ScanningDialog( const QString& text, const QString& windowTitle,
 
     WaitingSpinnerWidget* spinner = new WaitingSpinnerWidget();
     dialogLayout->addWidget( spinner );
+
+    // The spinner paints itself rather than being drawn by the style, and its
+    // stock ink is black, which a dark branding leaves invisible. Polishing
+    // first is what settles the palette a stylesheet asked for; read before
+    // that and the answer is still the platform's.
+    ensurePolished();
+    const QColor ink = palette().color( QPalette::WindowText );
+    spinner->setColor( ink );
+    spinner->setTextColor( ink );
+
     spinner->start();
 
     QLabel* rescanningLabel = new QLabel( text, this );
