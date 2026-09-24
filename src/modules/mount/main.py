@@ -142,10 +142,19 @@ def get_btrfs_subvolumes(partitions):
     if not btrfs_subvolumes:
         btrfs_subvolumes = [dict(mountPoint="/", subvolume="/@"), dict(mountPoint="/home", subvolume="/@home")]
 
-    # Filter out the subvolumes which have a dedicated partition
-    non_root_partition_mounts = [m for m in [p.get("mountPoint", None) for p in partitions] if
-                                 m is not None and m != '/']
-    btrfs_subvolumes = list(filter(lambda s: s["mountPoint"] not in non_root_partition_mounts, btrfs_subvolumes))
+    # Filter out the subvolumes which have a dedicated partition, and the ones
+    # that would lie inside such a partition: a separate /var is mounted over
+    # the /var/log subvolume and hides it. Root always keeps its subvolume.
+    non_root_partition_mounts = [m.rstrip('/') for m in [p.get("mountPoint", None) for p in partitions] if
+                                 m and m.rstrip('/')]
+
+    def is_on_dedicated_partition(mount_point):
+        mount_point = mount_point.rstrip('/')
+        if not mount_point:
+            return False
+        return any(mount_point == m or mount_point.startswith(m + '/') for m in non_root_partition_mounts)
+
+    btrfs_subvolumes = list(filter(lambda s: not is_on_dedicated_partition(s["mountPoint"]), btrfs_subvolumes))
 
     # If we have a swap **file**, give it a separate subvolume.
     swap_choice = libcalamares.globalstorage.value("partitionChoices")
