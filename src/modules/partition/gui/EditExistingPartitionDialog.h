@@ -37,10 +37,16 @@ public:
         Partition* p;
     };
 
+    /** @brief Dialog for editing @p partition on @p device
+     *
+     * With @p requireFormattedRoot set, the partition cannot be kept as it
+     * is and used for /.
+     */
     EditExistingPartitionDialog( PartitionCoreModule* core,
                                  Device* device,
                                  Partition* partition,
                                  const QStringList& usedMountPoints,
+                                 bool requireFormattedRoot,
                                  QWidget* parentWidget = nullptr );
     ~EditExistingPartitionDialog() override;
 
@@ -56,6 +62,7 @@ private:
     Partition* m_partition;
     PartitionSizeController* m_partitionSizeController;
     QStringList m_usedMountPoints;
+    bool m_requireFormattedRoot;
 
     PartitionTable::Flags newFlags() const;
     void replacePartResizerWidget();

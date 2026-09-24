@@ -32,6 +32,8 @@
 #include <QProcess>
 #include <QTemporaryDir>
 
+#include <algorithm>
+
 using Calamares::Partition::isPartitionFreeSpace;
 using Calamares::Partition::isPartitionNew;
 
@@ -455,13 +457,13 @@ isEfiFilesystemSuitableType( const Partition* candidate )
     switch ( type )
     {
     case FileSystem::Type::Fat32:
+    case FileSystem::Type::Fat16:
         return true;
     case FileSystem::Type::Fat12:
-    case FileSystem::Type::Fat16:
-        cWarning() << "FAT12 and FAT16 are probably not supported by EFI";
+        cWarning() << "FAT12 is not supported for the EFI boot partition";
         return false;
     default:
-        cWarning() << "EFI boot partition must be FAT32";
+        cWarning() << "EFI boot partition must be FAT32 or FAT16";
         return false;
     }
     QT_WARNING_POP
@@ -521,6 +523,52 @@ isEfiBootable( const Partition* candidate )
     // In KPMCore4, the flags are remapped, and the ESP flag is the same as Boot.
     static_assert( KPM_PARTITION_FLAG_ESP == KPM_PARTITION_FLAG( Boot ), "KPMCore API enum changed" );
     return flags.testFlag( KPM_PARTITION_FLAG_ESP );
+}
+
+QList< const Partition* >
+biosBootPartitions( Device* device )
+{
+    static const QString biosBootType = QStringLiteral( "21686148-6449-6e6f-744e-656564454649" );
+    QList< const Partition* > found;
+    for ( auto it = Calamares::Partition::PartitionIterator::begin( device );
+          it != Calamares::Partition::PartitionIterator::end( device );
+          ++it )
+    {
+        const Partition* partition = *it;
+        const auto flags = PartitionInfo::flags( partition );
+        // A change to the flags made here outranks the type the partition
+        // has now, which only speaks for a partition left as it is.
+        if ( flags.testFlag( KPM_PARTITION_FLAG( BiosGrub ) )
+             || ( flags == partition->activeFlags()
+                  && partition->type().compare( biosBootType, Qt::CaseInsensitive ) == 0 ) )
+        {
+            found.append( partition );
+        }
+    }
+    return found;
+}
+
+bool
+holdsNothing( const Partition* partition )
+{
+    const auto type = partition->fileSystem().type();
+    return PartitionInfo::mountPoint( partition ).isEmpty()
+        && ( type == FileSystem::Unformatted || type == FileSystem::Unknown );
+}
+
+const Partition*
+overwrittenByBootLoader( QList< const Partition* > biosBoot )
+{
+    if ( !biosBoot.isEmpty()
+         && std::all_of( biosBoot.cbegin(), biosBoot.cend(), []( const Partition* p ) { return p->number() > 0; } ) )
+    {
+        biosBoot = { *std::min_element( biosBoot.cbegin(),
+                                        biosBoot.cend(),
+                                        []( const Partition* a, const Partition* b )
+                                        { return a->number() < b->number(); } ) };
+    }
+    const auto it = std::find_if_not( biosBoot.cbegin(), biosBoot.cend(), holdsNothing );
+    return it == biosBoot.cend() ? nullptr : *it;
 }
 
 QString

@@ -97,7 +97,10 @@ DirFSRestrictLayout::init( const QVariantList& config )
 
     if ( efiNeedsSet )
     {
-        QList< FileSystem::Type > efiAllowedFSTypes = { FileSystem::Fat32 };
+        // An EFI system partition that came with the machine may well be
+        // FAT16, and it has to stay possible to keep one. FAT12 stays out
+        // because the mount and fstab steps only know fat16 and fat32 as vfat.
+        QList< FileSystem::Type > efiAllowedFSTypes = { FileSystem::Fat16, FileSystem::Fat32 };
         DirFSRestrictEntry efiRestrictEntry( "efi", efiAllowedFSTypes, true );
         m_dirFSRestrictLayout.append( efiRestrictEntry );
     }

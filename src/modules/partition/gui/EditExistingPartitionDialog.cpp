@@ -61,6 +61,7 @@ EditExistingPartitionDialog::EditExistingPartitionDialog( PartitionCoreModule* c
                                                           Device* device,
                                                           Partition* partition,
                                                           const QStringList& usedMountPoints,
+                                                          bool requireFormattedRoot,
                                                           QWidget* parentWidget )
     : QDialog( parentWidget )
     , m_ui( new Ui_EditExistingPartitionDialog )
@@ -69,6 +70,7 @@ EditExistingPartitionDialog::EditExistingPartitionDialog( PartitionCoreModule* c
     , m_partition( partition )
     , m_partitionSizeController( new PartitionSizeController( this ) )
     , m_usedMountPoints( usedMountPoints )
+    , m_requireFormattedRoot( requireFormattedRoot )
 {
     m_ui->setupUi( this );
     m_ui->encryptWidget->hide();
@@ -109,6 +111,7 @@ EditExistingPartitionDialog::EditExistingPartitionDialog( PartitionCoreModule* c
                  }
 
                  updateMountPointPicker();
+                 checkMountPointSelection();
              } );
 
     connect(
@@ -352,12 +355,51 @@ EditExistingPartitionDialog::updateMountPointPicker()
 void
 EditExistingPartitionDialog::checkMountPointSelection()
 {
-    if ( validateMountPoint( m_core,
-                             selectedMountPoint( m_ui->mountPointComboBox ),
-                             m_usedMountPoints,
-                             m_ui->fileSystemComboBox->currentText(),
-                             m_ui->mountPointExplanation,
-                             m_ui->buttonBox->button( QDialogButtonBox::Ok ) ) )
+    const bool keep = !m_ui->formatRadioButton->isChecked();
+    const QString mountPoint = selectedMountPoint( m_ui->mountPointComboBox );
+    QPushButton* okButton = m_ui->buttonBox->button( QDialogButtonBox::Ok );
+    const FileSystem::Type keptType = m_partition->fileSystem().type();
+    const bool keptIsEncrypted = keptType == FileSystem::Luks || keptType == FileSystem::Luks2;
+
+    // A kept / is refused whatever it holds, so that comes before any complaint
+    // about its filesystem, which for a locked encrypted partition would only
+    // lead to Format and to an unencrypted /.
+    if ( keep && m_requireFormattedRoot && mountPoint == QStringLiteral( "/" )
+         && !m_usedMountPoints.contains( mountPoint ) )
+    {
+        m_ui->mountPointExplanation->setWordWrap( true );
+        m_ui->mountPointExplanation->setText(
+            keptIsEncrypted
+                ? tr( "A partition used for / has to be formatted, and Format would leave this one unencrypted. "
+                      "To keep / encrypted, delete this partition and create a new one with Encrypt checked.",
+                      "@info" )
+                : tr( "A partition used for / has to be formatted. Choose Format instead of Keep.", "@info" ) );
+        okButton->setEnabled( false );
+        // The passphrase field may still be up from another mount point, and
+        // nothing kept gets unlocked for a refused /.
+        m_ui->encryptWidget->reset();
+        m_ui->encryptWidget->hide();
+        return;
+    }
+
+    // A kept partition stays whatever it is, and the combo box cannot always
+    // show that: it lists only the filesystems that can be created, and falls
+    // back to the default for any other. What gets mounted from an encrypted
+    // partition is the filesystem inside it.
+    QString fileSystem = m_ui->fileSystemComboBox->currentText();
+    if ( keep )
+    {
+        const FileSystem* kept = &m_partition->fileSystem();
+        if ( keptIsEncrypted )
+        {
+            const FileSystem* inner = static_cast< const FS::luks* >( kept )->innerFS();
+            kept = inner ? inner : kept;
+        }
+        fileSystem = FileSystem::nameForType( kept->type(), { QStringLiteral( "C" ) } );
+    }
+
+    if ( validateMountPoint(
+             m_core, mountPoint, m_usedMountPoints, fileSystem, m_ui->mountPointExplanation, okButton ) )
     {
         toggleEncryptWidget();
     }

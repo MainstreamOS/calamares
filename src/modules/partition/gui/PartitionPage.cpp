@@ -35,9 +35,12 @@
 #include "Branding.h"
 #include "GlobalStorage.h"
 #include "JobQueue.h"
+#include "partition/PartitionIterator.h"
 #include "partition/PartitionQuery.h"
+#include "utils/Gui.h"
 #include "utils/Logger.h"
 #include "utils/Retranslator.h"
+#include "utils/Units.h"
 #include "widgets/TranslationFix.h"
 
 #include <kpmcore/core/device.h>
@@ -54,12 +57,18 @@
 #include <QPointer>
 #include <QtConcurrent/QtConcurrent>
 
+#include <algorithm>
+#include <mutex>
+
 PartitionPage::PartitionPage( PartitionCoreModule* core, const Config & config, QWidget* parent )
     : QWidget( parent )
     , m_ui( new Ui_PartitionPage )
     , m_core( core )
     , m_lastSelectedBootLoaderIndex( -1 )
     , m_isEfi( PartUtils::isEfiSystem() )
+    , m_requireBootableLayout( config.requireBootableLayout() )
+    , m_requireFormattedRoot( config.requireFormattedRoot() )
+    , m_showBootLoaderSelector( config.showBootLoaderSelector() )
 {
     if ( config.installChoice() != Config::InstallChoice::Manual )
     {
@@ -73,6 +82,9 @@ PartitionPage::PartitionPage( PartitionCoreModule* core, const Config & config, 
     m_ui->bootLoaderComboBox->setModel( m_core->bootLoaderModel() );
     connect(
         m_core->bootLoaderModel(), &QAbstractItemModel::modelReset, this, &PartitionPage::restoreSelectedBootLoader );
+    // The boot loader model is rebuilt after every change to the layout,
+    // so its reset is the one notice that covers them all.
+    connect( m_core->bootLoaderModel(), &QAbstractItemModel::modelReset, this, &PartitionPage::updateLayoutProblems );
     PartitionBarsView::NestedPartitionsMode mode
         = Calamares::JobQueue::instance()->globalStorage()->value( "drawNestedPartitions" ).toBool()
         ? PartitionBarsView::DrawNestedPartitions
@@ -113,11 +125,18 @@ PartitionPage::PartitionPage( PartitionCoreModule* core, const Config & config, 
     connect( m_ui->editButton, &QAbstractButton::clicked, this, &PartitionPage::onEditClicked );
     connect( m_ui->deleteButton, &QAbstractButton::clicked, this, &PartitionPage::onDeleteClicked );
 
-    if ( m_isEfi )
+    // A distribution whose boot loader step picks the disk on its own would
+    // otherwise offer a choice that is then ignored.
+    if ( m_isEfi || !m_showBootLoaderSelector )
     {
         m_ui->bootLoaderComboBox->hide();
         m_ui->label_3->hide();
     }
+
+    const int iconSize = Calamares::defaultFontHeight();
+    m_ui->layoutProblemIcon->setPixmap(
+        Calamares::defaultPixmap( Calamares::StatusWarning, Calamares::Original, QSize( iconSize, iconSize ) ) );
+    m_ui->layoutProblemPanel->hide();
 
     CALAMARES_RETRANSLATE(
         m_ui->retranslateUi( this );
@@ -475,6 +494,13 @@ PartitionPage::onRevertClicked()
             {
                 m_ui->bootLoaderComboBox->setCurrentIndex( 0 );
             }
+            // Only the hidden selector skips its updates while the revert
+            // runs; a shown one has already set the path from the pick.
+            if ( !m_showBootLoaderSelector )
+            {
+                updateBootLoaderInstallPath();
+            }
+            updateLayoutProblems();
         },
         this );
 }
@@ -532,7 +558,7 @@ PartitionPage::editExistingPartition( Device* device, Partition* partition )
     mountPoints.removeOne( PartitionInfo::mountPoint( partition ) );
 
     QPointer< EditExistingPartitionDialog > dlg
-        = new EditExistingPartitionDialog( m_core, device, partition, mountPoints, this );
+        = new EditExistingPartitionDialog( m_core, device, partition, mountPoints, m_requireFormattedRoot, this );
     if ( dlg->exec() == QDialog::Accepted )
     {
         dlg->applyChanges( m_core );
@@ -540,6 +566,53 @@ PartitionPage::editExistingPartition( Device* device, Partition* partition )
     delete dlg;
 
     updateBootLoaderInstallPath();
+    // applyChanges() sets the partition's format mark and flags after the
+    // last model refresh it causes, so the check that refresh ran can be stale.
+    updateLayoutProblems();
+}
+
+/// @brief The partition set to be mounted at @p mountPoint, and the device it is on
+static std::pair< Partition*, Device* >
+findMountedPartition( const PartitionCoreModule* core, const QString& mountPoint )
+{
+    if ( !mountPoint.isEmpty() )
+    {
+        const DeviceModel* devices = core->deviceModel();
+        for ( int row = 0; row < devices->rowCount(); ++row )
+        {
+            Device* device = devices->deviceForIndex( devices->index( row ) );
+            for ( auto it = Calamares::Partition::PartitionIterator::begin( device );
+                  it != Calamares::Partition::PartitionIterator::end( device );
+                  ++it )
+            {
+                if ( PartitionInfo::mountPoint( *it ) == mountPoint )
+                {
+                    return { *it, device };
+                }
+            }
+        }
+    }
+    return { nullptr, nullptr };
+}
+
+/** @brief The disk holding /boot, or / when there is no separate /boot
+ *
+ * Empty when that partition is not on a disk the boot loader model offers,
+ * such as a logical volume or an array, which cannot take a boot loader.
+ */
+static QString
+diskHoldingBoot( const PartitionCoreModule* core )
+{
+    for ( const QString& mountPoint : { QStringLiteral( "/boot" ), QStringLiteral( "/" ) } )
+    {
+        const auto [ partition, device ] = findMountedPartition( core, mountPoint );
+        if ( partition )
+        {
+            const bool offered = core->bootLoaderModel()->findBootLoader( device->deviceNode() ).second != nullptr;
+            return offered ? device->deviceNode() : QString();
+        }
+    }
+    return QString();
 }
 
 void
@@ -550,7 +623,33 @@ PartitionPage::updateBootLoaderInstallPath()
         return;
     }
 
-    QVariant var = m_ui->bootLoaderComboBox->currentData( BootLoaderModel::BootLoaderPathRole );
+    // Without the selector nobody picks an entry, and the first one names the
+    // first disk. A boot loader step that picks the disk on its own writes to
+    // the one holding /boot, the disk the layout checks ask a BIOS boot
+    // partition of, so the summary names that disk instead.
+    if ( !m_showBootLoaderSelector )
+    {
+        // A revert frees the devices this walks on another thread, and its
+        // callback works the path out again once it is done.
+        std::unique_lock< QMutex > revertLock( m_revertMutex, std::try_to_lock );
+        if ( !revertLock.owns_lock() )
+        {
+            return;
+        }
+        const QString disk = diskHoldingBoot( m_core );
+        revertLock.unlock();
+        if ( !disk.isEmpty() )
+        {
+            cDebug() << "PartitionPage::updateBootLoaderInstallPath" << disk << "holds /boot or /";
+            m_core->setBootLoaderInstallPath( disk );
+            return;
+        }
+    }
+
+    // The hidden combo box only echoes the last path restored into it, which
+    // after a revert can name a disk that no longer holds anything.
+    const int row = m_showBootLoaderSelector ? m_ui->bootLoaderComboBox->currentIndex() : 0;
+    QVariant var = m_ui->bootLoaderComboBox->itemData( row, BootLoaderModel::BootLoaderPathRole );
     if ( !var.isValid() )
     {
         return;
@@ -569,6 +668,12 @@ PartitionPage::updateSelectedBootLoaderIndex()
 void
 PartitionPage::restoreSelectedBootLoader()
 {
+    // The model resets after every change to the layout, and a change can
+    // move /boot or / to another disk while the hidden entry stays put.
+    if ( !m_showBootLoaderSelector )
+    {
+        updateBootLoaderInstallPath();
+    }
     Calamares::restoreSelectedBootLoader( *( m_ui->bootLoaderComboBox ), m_core->bootLoaderInstallPath() );
 }
 
@@ -695,4 +800,229 @@ void
 PartitionPage::selectDeviceByIndex( int index )
 {
     m_ui->deviceComboBox->setCurrentIndex( index );
+}
+
+// FAT12 is left out because the mount and fstab steps only know fat16 and
+// fat32 as vfat.
+static bool
+isMountableFat( const Partition* partition )
+{
+    const auto type = partition->fileSystem().type();
+    return type == FileSystem::Fat16 || type == FileSystem::Fat32;
+}
+
+static bool
+isEncrypted( const Partition* partition )
+{
+    const auto type = partition->fileSystem().type();
+    return type == FileSystem::Luks || type == FileSystem::Luks2;
+}
+
+// On BIOS the kernels and initramfs images live on a FAT /boot of their own,
+// and this leaves room for more than one kernel.
+static constexpr int biosBootMinimumMiB = 512;
+
+QStringList
+PartitionPage::layoutProblems() const
+{
+    QStringList problems;
+    const auto [ root, rootDevice ] = findMountedPartition( m_core, QStringLiteral( "/" ) );
+
+    if ( m_requireBootableLayout )
+    {
+        if ( m_isEfi )
+        {
+            const QString espMountPoint
+                = Calamares::JobQueue::instance()->globalStorage()->value( "efiSystemPartition" ).toString();
+            const QString espFlag = PartitionTable::flagName( KPM_PARTITION_FLAG_ESP );
+            const auto [ esp, espDevice ] = findMountedPartition( m_core, espMountPoint );
+            if ( !esp )
+            {
+                problems.append( tr( "Add an EFI system partition: a FAT32 (or FAT16) partition mounted at "
+                                     "<strong>%1</strong> with the <strong>%2</strong> flag set.",
+                                     "@info" )
+                                     .arg( espMountPoint, espFlag ) );
+            }
+            else
+            {
+                if ( isEncrypted( esp ) )
+                {
+                    problems.append( tr( "The EFI system partition at <strong>%1</strong> cannot be encrypted, "
+                                         "because the firmware reads it before anything is unlocked.",
+                                         "@info" )
+                                         .arg( espMountPoint ) );
+                }
+                else if ( !isMountableFat( esp ) )
+                {
+                    problems.append( tr( "The EFI system partition at <strong>%1</strong> has to be formatted as "
+                                         "FAT32 (or FAT16).",
+                                         "@info" )
+                                         .arg( espMountPoint ) );
+                }
+                // On an MBR disk the flag only toggles the active bit, and
+                // nothing here can give a partition the EFI system type.
+                const PartitionTable* espTable = espDevice->partitionTable();
+                if ( !espTable || espTable->type() != PartitionTable::TableType::gpt )
+                {
+                    problems.append( tr( "The EFI system partition at <strong>%1</strong> is on <strong>%2</strong>, "
+                                         "which does not have a GPT partition table. Put the EFI system partition "
+                                         "on a GPT disk, where it can be marked so the firmware finds it.",
+                                         "@info" )
+                                         .arg( espMountPoint, espDevice->deviceNode() ) );
+                }
+                else if ( !PartUtils::isEfiBootable( esp ) )
+                {
+                    problems.append(
+                        tr( "The EFI system partition at <strong>%1</strong> needs the <strong>%2</strong> flag set.",
+                            "@info" )
+                            .arg( espMountPoint, espFlag ) );
+                }
+            }
+        }
+        else
+        {
+            const auto [ boot, bootDevice ] = findMountedPartition( m_core, QStringLiteral( "/boot" ) );
+            if ( !boot )
+            {
+                problems.append( tr( "Add a separate partition mounted at <strong>/boot</strong>: FAT32 (or FAT16), "
+                                     "not encrypted, and at least %1 MiB. On this computer the boot loader starts "
+                                     "the system from there.",
+                                     "@info" )
+                                     .arg( biosBootMinimumMiB ) );
+            }
+            else
+            {
+                if ( isEncrypted( boot ) )
+                {
+                    problems.append( tr( "The partition mounted at <strong>/boot</strong> cannot be encrypted, "
+                                         "because the boot loader reads it before anything is unlocked.",
+                                         "@info" ) );
+                }
+                else if ( !isMountableFat( boot ) )
+                {
+                    problems.append( tr( "The partition mounted at <strong>/boot</strong> has to be formatted as "
+                                         "FAT32 (or FAT16).",
+                                         "@info" ) );
+                }
+                if ( Calamares::BytesToMiB( boot->capacity() ) < biosBootMinimumMiB )
+                {
+                    problems.append(
+                        tr( "The partition mounted at <strong>/boot</strong> has to be at least %1 MiB.", "@info" )
+                            .arg( biosBootMinimumMiB ) );
+                }
+                const PartitionTable* table = bootDevice->partitionTable();
+                if ( bootDevice->type() == Device::Type::LVM_Device )
+                {
+                    problems.append( tr( "The partition mounted at <strong>/boot</strong> cannot be an LVM logical "
+                                         "volume. Use a regular partition.",
+                                         "@info" ) );
+                }
+                else if ( bootDevice->type() == Device::Type::SoftwareRAID_Device )
+                {
+                    problems.append( tr( "The partition mounted at <strong>/boot</strong> cannot be on software RAID. "
+                                         "Use a regular partition.",
+                                         "@info" ) );
+                }
+                else if ( table && table->type() == PartitionTable::TableType::gpt )
+                {
+                    const QString biosFlag = PartitionTable::flagName( KPM_PARTITION_FLAG( BiosGrub ) );
+                    const auto biosBoot = PartUtils::biosBootPartitions( bootDevice );
+                    if ( std::none_of( biosBoot.cbegin(), biosBoot.cend(), PartUtils::holdsNothing ) )
+                    {
+                        problems.append( tr( "The disk <strong>%1</strong> holding <strong>/boot</strong> has a GPT "
+                                             "partition table, so the boot loader also needs a BIOS boot partition "
+                                             "there. Create a small unformatted partition (at least 1 MiB) on it "
+                                             "with the <strong>%2</strong> flag set.",
+                                             "@info" )
+                                             .arg( bootDevice->deviceNode(), biosFlag ) );
+                    }
+                    if ( const Partition* overwritten = PartUtils::overwrittenByBootLoader( biosBoot ) )
+                    {
+                        QString name = Calamares::Partition::isPartitionNew( overwritten )
+                            ? tr( "New Partition", "@title" )
+                            : overwritten->partitionPath();
+                        const QString mountPoint = PartitionInfo::mountPoint( overwritten );
+                        if ( !mountPoint.isEmpty() )
+                        {
+                            name += QStringLiteral( " (%1)" ).arg( mountPoint );
+                        }
+                        problems.append( tr( "The boot loader writes itself into the first partition with the "
+                                             "<strong>%2</strong> flag on <strong>%1</strong>, and would overwrite "
+                                             "<strong>%3</strong>. Clear the flag on that partition, or make it an "
+                                             "unformatted, unencrypted partition with no mount point.",
+                                             "@info" )
+                                             .arg( bootDevice->deviceNode(), biosFlag, name ) );
+                    }
+                }
+            }
+        }
+
+        if ( !root )
+        {
+            problems.append( tr( "Add a partition mounted at <strong>/</strong> for the system.", "@info" ) );
+        }
+        else if ( rootDevice->type() == Device::Type::LVM_Device )
+        {
+            problems.append( tr( "The partition mounted at <strong>/</strong> cannot be an LVM logical volume. "
+                                 "Use a regular partition; it can still be encrypted.",
+                                 "@info" ) );
+        }
+        else if ( rootDevice->type() == Device::Type::SoftwareRAID_Device )
+        {
+            problems.append( tr( "The partition mounted at <strong>/</strong> cannot be on software RAID. "
+                                 "Use a regular partition; it can still be encrypted.",
+                                 "@info" ) );
+        }
+    }
+
+    if ( m_requireFormattedRoot && root && !PartitionInfo::format( root )
+         && !Calamares::Partition::isPartitionNew( root ) )
+    {
+        problems.append( isEncrypted( root )
+                             ? tr( "The encrypted partition mounted at <strong>/</strong> has to be formatted, and "
+                                   "Format would leave it unencrypted. To keep / encrypted, delete it and create a "
+                                   "new partition with <strong>Encrypt</strong> checked.",
+                                   "@info" )
+                             : tr( "The partition mounted at <strong>/</strong> has to be formatted. Edit it and "
+                                   "choose Format instead of Keep.",
+                                   "@info" ) );
+    }
+
+    return problems;
+}
+
+void
+PartitionPage::updateLayoutProblems()
+{
+    // A revert replaces the devices on another thread, and its callback checks
+    // again once it is done.
+    if ( !m_revertMutex.tryLock() )
+    {
+        return;
+    }
+    const bool wasAcceptable = isLayoutAcceptable();
+    m_layoutProblems = layoutProblems();
+    m_revertMutex.unlock();
+
+    if ( m_layoutProblems.isEmpty() )
+    {
+        m_ui->layoutProblemPanel->hide();
+        m_ui->layoutProblemLabel->clear();
+    }
+    else
+    {
+        QString text = tr( "To continue, the layout needs these changes:", "@info" ) + QStringLiteral( "<ul>" );
+        for ( const auto& problem : std::as_const( m_layoutProblems ) )
+        {
+            text += QStringLiteral( "<li>" ) + problem + QStringLiteral( "</li>" );
+        }
+        text += QStringLiteral( "</ul>" );
+        m_ui->layoutProblemLabel->setText( text );
+        m_ui->layoutProblemPanel->show();
+    }
+
+    if ( wasAcceptable != isLayoutAcceptable() )
+    {
+        Q_EMIT layoutAcceptableChanged( isLayoutAcceptable() );
+    }
 }

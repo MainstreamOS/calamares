@@ -446,6 +446,10 @@ Config::setConfigurationMap( const QVariantMap& configurationMap )
     m_allowManualPartitioning = Calamares::getBool( configurationMap, "allowManualPartitioning", true );
     m_preCheckEncryption = Calamares::getBool( configurationMap, "preCheckEncryption", false );
     m_showNotEncryptedBootMessage = Calamares::getBool( configurationMap, "showNotEncryptedBootMessage", true );
+    m_requireBootableLayout = Calamares::getBool( configurationMap, "requireBootableLayout", false );
+    m_requireFormattedRoot = Calamares::getBool( configurationMap, "requireFormattedRoot", false );
+    m_warnGptOnBios = Calamares::getBool( configurationMap, "warnGptOnBios", true );
+    m_showBootLoaderSelector = Calamares::getBool( configurationMap, "showBootLoaderSelector", true );
     m_requiredPartitionTableType = Calamares::getStringList( configurationMap, "requiredPartitionTableType" );
 
     {

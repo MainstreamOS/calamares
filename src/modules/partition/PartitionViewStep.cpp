@@ -36,6 +36,7 @@
 
 #include <kpmcore/core/device.h>
 #include <kpmcore/core/partition.h>
+#include <kpmcore/fs/luks.h>
 
 #include <QFormLayout>
 #include <QMessageBox>
@@ -377,6 +378,10 @@ PartitionViewStep::next()
             {
                 m_manualPartitionPage = new PartitionPage( m_core, *m_config );
                 m_widget->addWidget( m_manualPartitionPage );
+                connect( m_manualPartitionPage,
+                         &PartitionPage::layoutAcceptableChanged,
+                         this,
+                         &PartitionViewStep::nextPossiblyChanged );
             }
 
             m_widget->setCurrentWidget( m_manualPartitionPage );
@@ -416,7 +421,7 @@ PartitionViewStep::isNextEnabled() const
 
     if ( m_manualPartitionPage && m_widget->currentWidget() == m_manualPartitionPage )
     {
-        return m_core->hasRootMountPoint();
+        return m_core->hasRootMountPoint() && m_manualPartitionPage->isLayoutAcceptable();
     }
 
     return false;
@@ -551,6 +556,22 @@ calcFSConflictEntry( PartitionCoreModule* core, PartitionModel* partModel, QMode
     QString partMountPoint = partModel->data( partMountPointIdx ).toString();
     FileSystem::Type fsType;
     PartUtils::canonicalFilesystemName( partFs, &fsType );
+
+    // The restrictions are about the filesystem that gets mounted, and for an
+    // encrypted partition that is the one inside the LUKS container.
+    const Partition* partition = partModel->partitionForIndex( partFsIdx );
+    if ( partition
+         && ( partition->fileSystem().type() == FileSystem::Luks
+              || partition->fileSystem().type() == FileSystem::Luks2 ) )
+    {
+        const FileSystem* innerFs = static_cast< const FS::luks& >( partition->fileSystem() ).innerFS();
+        if ( innerFs )
+        {
+            fsType = innerFs->type();
+            partFs = Calamares::Partition::prettyNameForFileSystemType( fsType ).toLower();
+        }
+    }
+
     bool fsTypeIsAllowed = false;
     if ( fsType == FileSystem::Type::Unknown )
     {
@@ -795,7 +816,7 @@ PartitionViewStep::onLeave()
 
             cDebug() << "device: BIOS";
 
-            if ( shouldWarnForGPTOnBIOS( m_core ) )
+            if ( m_config->warnGptOnBios() && shouldWarnForGPTOnBIOS( m_core ) )
             {
                 const QString biosFlagName = PartitionTable::flagName( KPM_PARTITION_FLAG( BiosGrub ) );
                 QString message = tr( "Option to use GPT on BIOS" );

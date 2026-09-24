@@ -54,7 +54,7 @@ public:
      *
      * @p config is a list of partition entries (in QVariant form,
      * read from YAML). If no entries are given, the only restriction is that
-     * the EFI system partition must use fat32.
+     * the EFI system partition must use fat16 or fat32.
      *
      * Any unknown values in the config will be ignored.
      */

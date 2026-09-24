@@ -20,8 +20,10 @@
 #include <kpmcore/fs/filesystem.h>
 
 // Qt
+#include <QList>
 #include <QString>
 
+class Device;
 class DeviceModel;
 class Partition;
 namespace Logger
@@ -89,7 +91,7 @@ bool isEfiSystem();
 
 /**
  * @brief Is the @p partition suitable as an EFI boot partition?
- * Checks for filesystem type (FAT32).
+ * Checks for filesystem type (FAT32 or FAT16).
  */
 bool isEfiFilesystemSuitableType( const Partition* candidate );
 
@@ -137,6 +139,30 @@ QString efiFilesystemMinimumSizeGSKey();
  * the partition table layout, this may mean different flags.
  */
 bool isEfiBootable( const Partition* candidate );
+
+/** @brief The partitions on @p device that count as BIOS boot partitions
+ *
+ * GPT leaves no gap after the first sector for the second stage of a BIOS
+ * boot loader, so on a GPT disk that goes to a BIOS boot partition instead.
+ * A partition counts when it has the bios-grub flag, or when its flags are
+ * left as they are and it has the BIOS boot partition type.
+ */
+QList< const Partition* > biosBootPartitions( Device* device );
+
+/** @brief Can a BIOS boot loader have @p partition to itself?
+ *
+ * The boot loader writes its second stage straight over whatever is there,
+ * so only a partition with no filesystem and no mount point qualifies.
+ */
+bool holdsNothing( const Partition* partition );
+
+/** @brief The partition among @p biosBoot the boot loader would write over, if any
+ *
+ * limine bios-install takes the first BIOS boot partition in table order.
+ * A partition created here gets its number only when it is written, so
+ * while one of those is among them, any of them could turn out to be first.
+ */
+const Partition* overwrittenByBootLoader( QList< const Partition* > biosBoot );
 
 /** @brief translate @p fsName into a recognized name and type
  *

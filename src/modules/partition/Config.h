@@ -162,6 +162,32 @@ public:
     /// @brief Show "Boot partition not encrypted" warning (not explicitly disabled in the config file)?
     bool showNotEncryptedBootMessage() const { return m_showNotEncryptedBootMessage; }
 
+    /** @brief Must a manual layout be one the boot loader can start?
+     *
+     * When @c true, Next on the manual partitioning page stays disabled,
+     * with the reason shown, until the layout has what the firmware needs
+     * to start the installed system. Default value is @c false
+     */
+    bool requireBootableLayout() const { return m_requireBootableLayout; }
+
+    /** @brief Must the partition for / be formatted?
+     *
+     * When @c true, an existing partition cannot be kept as it is and
+     * used for /. Default value is @c false
+     */
+    bool requireFormattedRoot() const { return m_requireFormattedRoot; }
+
+    /// @brief Explain on BIOS with GPT that a bios_grub partition is needed? Default value is @c true
+    bool warnGptOnBios() const { return m_warnGptOnBios; }
+
+    /** @brief Offer a choice of where the boot loader goes on BIOS?
+     *
+     * Covers "Install boot loader on" in manual partitioning and the
+     * boot loader location of Alongside, Replace and Erase on the choice
+     * page. Default value is @c true
+     */
+    bool showBootLoaderSelector() const { return m_showBootLoaderSelector; }
+
     /** @brief Will @p tableType be ok?
      *
      * If no required types are specified, it's ok, otherwise the
@@ -222,6 +248,10 @@ private:
     bool m_allowManualPartitioning = true;
     bool m_preCheckEncryption = false;
     bool m_showNotEncryptedBootMessage = true;
+    bool m_requireBootableLayout = false;
+    bool m_requireFormattedRoot = false;
+    bool m_warnGptOnBios = true;
+    bool m_showBootLoaderSelector = true;
     bool m_isLVMEnabled = true;
     QStringList m_essentialMounts;
 };

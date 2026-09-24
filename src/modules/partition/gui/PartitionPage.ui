@@ -212,6 +212,43 @@ SPDX-License-Identifier: GPL-3.0-or-later
      </item>
     </layout>
    </item>
+   <item>
+    <widget class="QWidget" name="layoutProblemPanel" native="true">
+     <layout class="QHBoxLayout" name="layoutProblemLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item alignment="Qt::AlignTop">
+       <widget class="QLabel" name="layoutProblemIcon"/>
+      </item>
+      <item>
+       <widget class="QLabel" name="layoutProblemLabel">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::RichText</enum>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>

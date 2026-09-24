@@ -41,10 +41,25 @@ public:
     int selectedDeviceIndex();
     void selectDeviceByIndex( int index );
 
+    /** @brief Does the layout meet what the configuration requires?
+     *
+     * Only the checks that *requireBootableLayout* and *requireFormattedRoot*
+     * ask for are made, so without either this is always @c true. When it
+     * is @c false, the page shows why.
+     */
+    bool isLayoutAcceptable() const { return m_layoutProblems.isEmpty(); }
+
+Q_SIGNALS:
+    void layoutAcceptableChanged( bool acceptable );
+
 private Q_SLOTS:
     /// @brief Update everything when the base device changes
     void updateFromCurrentDevice();
-    /// @brief Update when the selected device for boot loader changes
+    /** @brief Update when the selected device for boot loader changes
+     *
+     * With the selector hidden, the path follows the disk holding /boot
+     * (or / when there is no separate /boot) after every change to the layout.
+     */
     void updateBootLoaderInstallPath();
     /// @brief Explicitly selected boot loader path
     void updateSelectedBootLoaderIndex();
@@ -52,6 +67,8 @@ private Q_SLOTS:
     void restoreSelectedBootLoader();
     /// @brief Make the selections in each widget match
     void reconcileSelections();
+    /// @brief Check the layout again and show what, if anything, is wrong with it
+    void updateLayoutProblems();
 
 private:
     QScopedPointer< Ui_PartitionPage > m_ui;
@@ -82,9 +99,16 @@ private:
 
     QStringList getCurrentUsedMountpoints();
 
+    /// @brief Everything in the layout that keeps it from being accepted, as sentences
+    QStringList layoutProblems() const;
+
     QMutex m_revertMutex;
     int m_lastSelectedBootLoaderIndex;
     bool m_isEfi;
+    bool m_requireBootableLayout;
+    bool m_requireFormattedRoot;
+    bool m_showBootLoaderSelector;
+    QStringList m_layoutProblems;
 };
 
 #endif  // PARTITIONPAGE_H

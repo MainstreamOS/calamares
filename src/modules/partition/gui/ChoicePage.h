@@ -110,6 +110,14 @@ private slots:
 private:
     bool calculateNextEnabled() const;
     void updateNextEnabled();
+    /** @brief Why the boot loader would have nowhere to go on the selected disk, if so
+     *
+     * Only asked on BIOS with *requireBootableLayout*, for Alongside and
+     * Replace. Neither of those adds or changes a BIOS boot partition, so
+     * the disk as it is now decides, less the partition Replace takes away.
+     * Empty when the boot loader has somewhere to go.
+     */
+    QString biosBootProblem() const;
     void setupChoices();
     void checkInstallChoiceRadioButton( Config::InstallChoice choice );  ///< Sets the chosen button to "on"
     /** @brief Create a panel with "boot loader location:"
@@ -167,6 +175,7 @@ private:
     QPointer< QComboBox > m_bootloaderComboBox;
     QPointer< QLabel > m_efiLabel;
     QPointer< QComboBox > m_efiComboBox;
+    QPointer< QLabel > m_biosBootLabel;
 
     int m_lastSelectedDeviceIndex = -1;
     int m_osproberEntriesCount = -1;

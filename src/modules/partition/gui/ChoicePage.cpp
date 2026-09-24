@@ -56,6 +56,8 @@
 #include <QListView>
 #include <QtConcurrent/QtConcurrent>
 
+#include <algorithm>
+
 using Calamares::Partition::findPartitionByPath;
 using Calamares::Partition::isPartitionFreeSpace;
 using Calamares::Partition::PartitionIterator;
@@ -143,6 +145,8 @@ ChoicePage::retranslate()
     updateSwapChoicesTr();
     updateChoiceButtonsTr();
     updateActionDescriptionsTr();
+    // updateNextEnabled() writes the BIOS boot partition reason, which is translated text.
+    updateNextEnabled();
 }
 
 /** @brief Sets the @p model for the given @p box and adjusts UI sizes to match.
@@ -1073,7 +1077,7 @@ ChoicePage::updateActionChoicePreview( InstallChoice choice )
         layout->addWidget( sizeLabel );
         sizeLabel->setWordWrap( true );
 
-        if ( !m_isEfi )
+        if ( !m_isEfi && m_config->showBootLoaderSelector() )
         {
             layout->addWidget( createBootloaderPanel() );
         }
@@ -1140,7 +1144,7 @@ ChoicePage::updateActionChoicePreview( InstallChoice choice )
         layout->addWidget( m_afterPartitionBarsView );
         layout->addWidget( m_afterPartitionLabelsView );
 
-        if ( !m_isEfi )
+        if ( !m_isEfi && m_config->showBootLoaderSelector() )
         {
             layout->addWidget( createBootloaderPanel() );
         }
@@ -1192,6 +1196,16 @@ ChoicePage::updateActionChoicePreview( InstallChoice choice )
         m_efiLabel->setBuddy( m_efiComboBox );
         m_efiComboBox->hide();
         efiLayout->addStretch();
+    }
+
+    if ( !m_isEfi && m_config->requireBootableLayout()
+         && ( m_config->installChoice() == InstallChoice::Alongside
+              || m_config->installChoice() == InstallChoice::Replace ) )
+    {
+        m_biosBootLabel = new QLabel( m_previewAfterFrame );
+        m_biosBootLabel->setWordWrap( true );
+        m_biosBootLabel->hide();
+        layout->addWidget( m_biosBootLabel );
     }
 
     // Also handle selection behavior on beforeFrame.
@@ -1537,6 +1551,12 @@ ChoicePage::calculateNextEnabled() const
         }
     }
 
+    if ( !biosBootProblem().isEmpty() )
+    {
+        cDebug() << "No BIOS boot partition the boot loader can use for alongside or replace";
+        return false;
+    }
+
     // You can have an invisible encryption checkbox, which is
     // still checked -- then do the encryption.
     if ( m_config->installChoice() != InstallChoice::Manual
@@ -1557,9 +1577,88 @@ ChoicePage::calculateNextEnabled() const
     return true;
 }
 
+QString
+ChoicePage::biosBootProblem() const
+{
+    const auto choice = m_config->installChoice();
+    if ( m_isEfi || !m_config->requireBootableLayout() || !m_beforePartitionBarsView
+         || ( choice != InstallChoice::Alongside && choice != InstallChoice::Replace ) )
+    {
+        return QString();
+    }
+
+    // The Current preview shows a copy of the disk as it is, which the changes
+    // Replace makes on another thread never reach, and the partition to
+    // replace is picked in it.
+    const auto* model = qobject_cast< const PartitionModel* >( m_beforePartitionBarsView->model() );
+    Device* device = model ? model->device() : nullptr;
+    const PartitionTable* table = device ? device->partitionTable() : nullptr;
+    if ( !table || table->type() != PartitionTable::TableType::gpt )
+    {
+        return QString();
+    }
+
+    auto biosBoot = PartUtils::biosBootPartitions( device );
+    const auto* selection = m_beforePartitionBarsView->selectionModel();
+    if ( choice == InstallChoice::Replace && selection && selection->currentIndex().isValid() )
+    {
+        const QString replaced = selection->currentIndex().data( PartitionModel::PartitionPathRole ).toString();
+        biosBoot.erase( std::remove_if( biosBoot.begin(),
+                                        biosBoot.end(),
+                                        [ &replaced ]( const Partition* p )
+                                        { return p->partitionPath() == replaced; } ),
+                        biosBoot.end() );
+    }
+
+    QStringList problems;
+    const QString biosFlag = PartitionTable::flagName( KPM_PARTITION_FLAG( BiosGrub ) );
+    if ( std::none_of( biosBoot.cbegin(), biosBoot.cend(), PartUtils::holdsNothing ) )
+    {
+        // A GPT disk with an EFI system partition was nearly always set up by
+        // a UEFI install, so a BIOS start here most likely means the firmware
+        // picked the installer's legacy entry by mistake, which a restart
+        // fixes without touching the disk.
+        if ( !Calamares::Partition::findPartitions( { device }, PartUtils::isEfiBootable ).isEmpty() )
+        {
+            problems.append( tr( "The disk <strong>%1</strong> has an EFI system partition, so the system on it "
+                                 "most likely starts in UEFI mode, but this installer was started in BIOS (legacy) "
+                                 "mode. Restart and choose the installer's UEFI entry in the boot menu. To install "
+                                 "in BIOS mode instead, use manual partitioning to create a small unformatted "
+                                 "partition (at least 1 MiB) with the <strong>%2</strong> flag set.",
+                                 "@info" )
+                                 .arg( device->deviceNode(), biosFlag ) );
+        }
+        else
+        {
+            problems.append( tr( "The disk <strong>%1</strong> has a GPT partition table, so on this computer the "
+                                 "boot loader needs a BIOS boot partition there, and the disk has none it can use. "
+                                 "Use manual partitioning to create a small unformatted partition (at least 1 MiB) "
+                                 "with the <strong>%2</strong> flag set.",
+                                 "@info" )
+                                 .arg( device->deviceNode(), biosFlag ) );
+        }
+    }
+    if ( const Partition* overwritten = PartUtils::overwrittenByBootLoader( biosBoot ) )
+    {
+        problems.append( tr( "The boot loader writes itself into the first partition with the <strong>%2</strong> "
+                             "flag on <strong>%1</strong>, and would overwrite <strong>%3</strong>. Use manual "
+                             "partitioning to clear the flag on that partition.",
+                             "@info" )
+                             .arg( device->deviceNode(), biosFlag, overwritten->partitionPath() ) );
+    }
+    return problems.join( QStringLiteral( "<br/>" ) );
+}
+
 void
 ChoicePage::updateNextEnabled()
 {
+    if ( m_biosBootLabel )
+    {
+        const QString problem = biosBootProblem();
+        m_biosBootLabel->setText( problem );
+        m_biosBootLabel->setVisible( !problem.isEmpty() );
+    }
+
     bool enabled = calculateNextEnabled();
 
     if ( enabled != m_nextEnabled )
